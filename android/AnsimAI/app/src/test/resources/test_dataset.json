@@ -1,0 +1,53 @@
+[
+  {"text":"오늘 날씨 맑고 좋네요","expected_min_level":"SAFE","expected_max_level":"SAFE","category":"normal","description":"일반 안전 대화"},
+  {"text":"점심 뭐 먹을까요?","expected_min_level":"SAFE","expected_max_level":"SAFE","category":"normal","description":"일반 질문"},
+  {"text":"삼성전자 실적이 좋아졌대","expected_min_level":"SAFE","expected_max_level":"SAFE","category":"normal","description":"정상 투자 뉴스 언급"},
+  {"text":"아빠한테 말하지 말고 생일선물 준비하자","expected_min_level":"SAFE","expected_max_level":"CAUTION","category":"normal","description":"생일 이벤트 (오탐 주의)"},
+  {"text":"엄마 나 폰 고장났는데 집에 가서 고칠게","expected_min_level":"SAFE","expected_max_level":"CAUTION","category":"normal","description":"실제 가족 연락 (송금 없음)"},
+  {"text":"카카오 인증번호가 안 와서 다시 요청했어","expected_min_level":"SAFE","expected_max_level":"CAUTION","category":"normal","description":"본인이 인증번호 요청"},
+  {"text":"저금리 대출 알아보고 있어","expected_min_level":"SAFE","expected_max_level":"CAUTION","category":"normal","description":"대출 정보 탐색"},
+  {"text":"코인 투자 어떻게 생각해?","expected_min_level":"SAFE","expected_max_level":"CAUTION","category":"normal","description":"코인 의견 묻기"},
+
+  {"text":"엄마 나야 폰 고장났어 이 번호로 50만원 보내줘","expected_min_level":"DANGER","expected_max_level":"CRITICAL","category":"family_impersonation","description":"가족 사칭 송금 요구"},
+  {"text":"아빠 나야 새번호야 급하게 30만원 필요해 말하지마","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"family_impersonation","description":"가족 사칭 + 비밀 요구"},
+  {"text":"엄마 나야 핸드폰 고장났어 구글 기프트카드 30만원 사서 번호 보내줘","expected_min_level":"DANGER","expected_max_level":"CRITICAL","category":"family_impersonation","description":"상품권 사기"},
+
+  {"text":"검사입니다 고객님 계좌가 범죄에 연루되었습니다","expected_min_level":"CAUTION","expected_max_level":"CRITICAL","category":"voice_phishing","description":"검사 사칭"},
+  {"text":"안전계좌로 지금 바로 돈을 옮겨주세요","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"voice_phishing","description":"안전계좌 요구"},
+  {"text":"금융감독원입니다 인증번호를 알려주세요","expected_min_level":"DANGER","expected_max_level":"CRITICAL","category":"voice_phishing","description":"금감원 사칭 인증번호"},
+  {"text":"수사 중이니 가족에게 절대 말하지 마세요","expected_min_level":"DANGER","expected_max_level":"CRITICAL","category":"voice_phishing","description":"고립 유도"},
+  {"text":"계좌 동결 막으려면 안전계좌로 이체해야 합니다","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"voice_phishing","description":"계좌 동결 위협"},
+
+  {"text":"AnyDesk 설치해서 코드 알려주세요","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"remote_control","description":"AnyDesk 설치 유도"},
+  {"text":"TeamViewer 설치하고 화면 공유해주세요","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"remote_control","description":"TeamViewer 설치"},
+  {"text":"원격제어 앱 설치해 주세요","expected_min_level":"DANGER","expected_max_level":"CRITICAL","category":"remote_control","description":"원격제어 요구"},
+
+  {"text":"이 종목 세력 매집 완료 내일 상한가 VIP방에서만","expected_min_level":"CAUTION","expected_max_level":"CRITICAL","category":"stock_fraud","description":"리딩방 세력 상한가"},
+  {"text":"원금보장 수익 보장 손실보전 해드립니다","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"stock_fraud","description":"원금+수익 동시 보장"},
+  {"text":"내부정보입니다 지금 바로 매수하세요","expected_min_level":"CAUTION","expected_max_level":"DANGER","category":"stock_fraud","description":"내부정보 사칭"},
+
+  {"text":"상장 확정된 비상장주 기관 물량 특별 배정 10배 갑니다","expected_min_level":"DANGER","expected_max_level":"CRITICAL","category":"unlisted_stock","description":"비상장 상장 확정"},
+  {"text":"일반인은 못 사는 주식 오늘만 가능합니다","expected_min_level":"DANGER","expected_max_level":"CRITICAL","category":"unlisted_stock","description":"희소성 조작"},
+
+  {"text":"출금하려면 세금 먼저 내야 합니다","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"crypto_fraud","description":"출금 전 세금"},
+  {"text":"보증금 입금하시면 출금 처리해드립니다","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"crypto_fraud","description":"보증금 요구"},
+  {"text":"이 링크로 거래소 앱 설치하세요 공식 앱보다 수수료 낮음","expected_min_level":"CAUTION","expected_max_level":"DANGER","category":"crypto_fraud","description":"가짜 거래소 설치 (링크로 거래소 55점)"},
+
+  {"text":"택배 주소 오류 bit.ly/xxxxx 확인하세요","expected_min_level":"CAUTION","expected_max_level":"DANGER","category":"smishing","description":"택배 스미싱"},
+  {"text":"청첩장입니다 확인해주세요 http://xxx.com","expected_min_level":"CAUTION","expected_max_level":"DANGER","category":"smishing","description":"청첩장 스미싱"},
+
+  {"text":"저금리 대출 가능 선이자 먼저 내주세요","expected_min_level":"DANGER","expected_max_level":"CRITICAL","category":"loan_fraud","description":"선이자 대출 사기 (저금리30+선이자50=80점)"},
+
+  {"text":"금감원 직원입니다 계좌 보호 위해 AnyDesk 설치하고 안전계좌로 이체하세요","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"multi","description":"복합 위험 (기관사칭+원격제어+안전계좌)"},
+  {"text":"검사입니다 안전계좌 인증번호 원격제어 앱 설치 가족에게 말하지 마세요","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"multi","description":"모든 보이스피싱 신호 복합"},
+
+  {"text":"돈 보내줘","expected_min_level":"CAUTION","expected_max_level":"DANGER","category":"family_impersonation","description":"단순 송금 요구"},
+  {"text":"지금 바로 입금해주세요","expected_min_level":"CAUTION","expected_max_level":"DANGER","category":"voice_phishing","description":"즉시 입금 요구 (입금해주세요 키워드)"},
+  {"text":"지금 바로 50만원을 보내야 합니다 급해","expected_min_level":"CAUTION","expected_max_level":"DANGER","category":"family_impersonation","description":"긴급성 + 금액 + 송금 (보내야 키워드)"},
+
+  {"text":"Send money now do not tell your family","expected_min_level":"SAFE","expected_max_level":"CAUTION","category":"foreign","description":"영어 사기 문구 (탐지 제한적)"},
+  {"text":"돈★보★내★줘","expected_min_level":"SAFE","expected_max_level":"CAUTION","category":"adversarial","description":"특수문자 우회 시도 (현재 탐지 한계 허용)"},
+  {"text":"돈  보  내  줘  말  하  지  마","expected_min_level":"SAFE","expected_max_level":"CAUTION","category":"adversarial","description":"띄어쓰기 우회 (현재 탐지 한계 허용)"},
+  {"text":"anydesk 설치해","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"adversarial","description":"소문자 원격제어"},
+  {"text":"ANYDESK 설치해","expected_min_level":"CRITICAL","expected_max_level":"CRITICAL","category":"adversarial","description":"대문자 원격제어"}
+]

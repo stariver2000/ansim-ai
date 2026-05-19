@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ── MVP 1: 텍스트 분석 ── -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- ── MVP 2: 알림 모니터링 (NotificationListenerService는 별도 권한 승인 필요) ── -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- 전화 기능이 없는 기기(태블릿, 크롬북)에서도 설치 가능하도록 -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
+    <!-- ── MVP 2: 오버레이 (설정에서 사용자가 직접 허용) ── -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- ── MVP 2: 알림 채널 ── -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ── MVP 2: 원격제어 앱 설치 감지용 패키지 가시성 (QUERY_ALL_PACKAGES 대체) ── -->
+    <queries>
+        <package android:name="com.anydesk.anydeskandroid" />
+        <package android:name="com.teamviewer.teamviewer" />
+        <package android:name="net.rustdesk" />
+        <package android:name="com.rsupport.mobizen.sec" />
+        <package android:name="com.kakao.talk" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="org.telegram.messenger.web" />
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="false"
+        android:theme="@style/Theme.AnsimAI">
+
+        <!-- ── 메인 액티비티 ── -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- ── MVP 2: 알림 모니터링 서비스 ── -->
+        <!-- 사용 방법: 설정 → 앱 → 특별한 앱 접근 → 알림 액세스 → 안심동행 AI 허용 -->
+        <service
+            android:name=".monitoring.NotificationMonitorService"
+            android:exported="true"
+            android:label="안심동행 AI 보호 서비스"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- ── MVP 2: SMS 수신 브로드캐스트 ── -->
+        <receiver
+            android:name=".monitoring.SmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ── MVP 2: 앱 설치 감지 브로드캐스트 ── -->
+        <receiver
+            android:name=".monitoring.AppInstallMonitor"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>

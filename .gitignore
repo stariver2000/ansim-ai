@@ -1,0 +1,19 @@
+# Android build outputs
+android/AnsimAI/.gradle/
+android/AnsimAI/build/
+android/AnsimAI/app/build/
+android/AnsimAI/local.properties
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# API Keys (절대 커밋하면 안 됨)
+local.properties
+*.keystore
+google-services.json
+
+# Gradle caches
+.gradle/
+gradle/wrapper/gradle-wrapper.jar
