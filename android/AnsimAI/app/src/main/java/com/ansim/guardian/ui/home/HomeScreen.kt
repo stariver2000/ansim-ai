@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ansim.guardian.domain.engine.LlmStatus
 import com.ansim.guardian.ui.theme.*
 
 @Composable
@@ -28,7 +29,8 @@ fun HomeScreen(
     guardianName: String = "",
     isGuardianConfigured: Boolean = false,
     isMonitoringEnabled: Boolean = true,
-    alertLogCount: Int = 0
+    alertLogCount: Int = 0,
+    llmStatus: LlmStatus = LlmStatus.UNAVAILABLE
 ) {
     var inputText by remember { mutableStateOf("") }
 
@@ -68,7 +70,8 @@ fun HomeScreen(
         // 감시 On/Off + 상태 카드
         MonitoringStatusCard(
             isEnabled = isMonitoringEnabled,
-            onToggle = onToggleMonitoring
+            onToggle = onToggleMonitoring,
+            llmStatus = llmStatus
         )
 
         // 텍스트 입력
@@ -116,7 +119,8 @@ private fun HeaderSection() {
 @Composable
 private fun MonitoringStatusCard(
     isEnabled: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    llmStatus: LlmStatus = LlmStatus.UNAVAILABLE
 ) {
     val bgColor = if (isEnabled) SafeGreenLight else Color(0xFFF5F5F5)
     val textColor = if (isEnabled) SafeGreen else TextSecondary
@@ -145,6 +149,29 @@ private fun MonitoringStatusCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = textColor
                 )
+                // LLM 상태 배지
+                if (isEnabled) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        when (llmStatus) {
+                            LlmStatus.LOADING -> {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(10.dp),
+                                    strokeWidth = 1.5.dp,
+                                    color = textColor
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text("AI 분석 준비 중...", style = MaterialTheme.typography.labelSmall, color = textColor)
+                            }
+                            LlmStatus.READY -> {
+                                Text("🤖 AI 분석 준비 완료", style = MaterialTheme.typography.labelSmall, color = textColor)
+                            }
+                            LlmStatus.UNAVAILABLE -> {
+                                Text("📋 규칙 기반 감지", style = MaterialTheme.typography.labelSmall, color = textColor)
+                            }
+                        }
+                    }
+                }
             }
             Switch(
                 checked = isEnabled,

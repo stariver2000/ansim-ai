@@ -52,9 +52,9 @@ Java_com_ansim_guardian_ai_llm_LlamaCppEngine_createContextNative(
     auto* model = reinterpret_cast<llama_model*>(modelPtr);
 
     llama_context_params params = llama_context_default_params();
-    params.n_ctx     = 2048;
-    params.n_batch   = 512;
-    params.n_threads = 4;
+    params.n_ctx     = 512;   // 짧은 문자 분석용 (KV캐시 4x 절약)
+    params.n_batch   = 512;   // n_ctx와 동일하게 — 이보다 작으면 SIGABRT
+    params.n_threads = 6;     // A53 big.LITTLE: 6코어 활용
 
     llama_context* ctx = llama_init_from_model(model, params);
     if (!ctx) {
@@ -62,15 +62,28 @@ Java_com_ansim_guardian_ai_llm_LlamaCppEngine_createContextNative(
         return 0L;
     }
 
-    // 샘플러 체인: top-k → top-p → temp → dist(random)
+    // Greedy 샘플러 — JSON 출력에 최적, 가장 빠름 (확률 계산 없음)
     llama_sampler_chain_params sparams = llama_sampler_chain_default_params();
     llama_sampler* smpl = llama_sampler_chain_init(sparams);
-    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(50));
-    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(0.9f, 1));
-    llama_sampler_chain_add(smpl, llama_sampler_init_temp(0.8f));
-    llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+    llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
 
     auto* ansim_ctx = new AnsimCtx{ctx, smpl};
+
+    // ── Pre-warm: 더미 토큰 1개 디코드로 모델 가중치를 OS 페이지 캐시에 올림
+    // 이 작업 후 실제 추론 속도가 대폭 향상됨 (첫 번째 느린 추론을 앱 시작 시로 분산)
+    {
+        const llama_vocab* vocab = llama_model_get_vocab(model);
+        llama_token bos = llama_vocab_bos(vocab);
+        if (bos != LLAMA_TOKEN_NULL) {
+            llama_batch warm_batch = llama_batch_get_one(&bos, 1);
+            llama_decode(ctx, warm_batch);
+            // KV 캐시 초기화 (더미 결과 버림)
+            llama_memory_t mem = llama_get_memory(ctx);
+            if (mem) llama_memory_clear(mem, false);
+            LOGI("Pre-warm 완료 — 이후 추론 속도 향상됨");
+        }
+    }
+
     LOGI("컨텍스트 생성 완료");
     return reinterpret_cast<jlong>(ansim_ctx);
 }
@@ -108,6 +121,11 @@ Java_com_ansim_guardian_ai_llm_LlamaCppEngine_generateNative(
     if (n_tokens < 0) {
         LOGE("토크나이즈 실패 (필요 버퍼: %d)", -n_tokens);
         return env->NewStringUTF("[오류] 토크나이즈 실패");
+    }
+    // n_ctx 초과 방지 (최대 450토큰, 나머지 62개는 생성용)
+    if (n_tokens > 450) {
+        LOGE("토큰 초과 (%d > 450), 잘라냄", n_tokens);
+        n_tokens = 450;
     }
     tokens.resize(n_tokens);
     LOGI("프롬프트 토큰 수: %d", n_tokens);

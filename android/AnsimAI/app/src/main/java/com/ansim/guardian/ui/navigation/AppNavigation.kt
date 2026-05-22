@@ -59,7 +59,8 @@ fun AppNavigation(
                 guardianName = uiState.guardianName,
                 isGuardianConfigured = uiState.guardianPhone.isNotBlank(),
                 isMonitoringEnabled = uiState.isMonitoringEnabled,
-                alertLogCount = uiState.alertLogs.size
+                alertLogCount = uiState.alertLogs.size,
+                llmStatus = uiState.llmStatus
             )
         }
 

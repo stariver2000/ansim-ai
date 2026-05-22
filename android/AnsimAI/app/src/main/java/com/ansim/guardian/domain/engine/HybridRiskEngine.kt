@@ -10,10 +10,18 @@ import com.ansim.guardian.domain.model.RiskResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicReference
 
 private const val TAG = "HybridRiskEngine"
+
+enum class LlmStatus {
+    UNAVAILABLE,   // 모델 파일 없음 or RAM 부족
+    LOADING,       // 로드 + pre-warm 중
+    READY          // 사용 가능
+}
 
 /**
  * 규칙 기반 엔진 + On-device LLM 폴백 하이브리드 엔진
@@ -29,28 +37,35 @@ private const val TAG = "HybridRiskEngine"
 class HybridRiskEngine(context: Context) : RiskEngine {
 
     private val ruleEngine = RuleBasedRiskEngine()
-
-    // 모델 로드 완료 후 세팅됨 (null = LLM 비활성)
     private val llmEngine = AtomicReference<LlmRiskEngine?>(null)
-
     private val initScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // UI에서 구독 가능한 로딩 상태
+    private val _llmStatus = MutableStateFlow(LlmStatus.LOADING)
+    val llmStatus: StateFlow<LlmStatus> = _llmStatus
 
     init {
         initScope.launch {
+            val start = System.currentTimeMillis()
             val deviceChecker = DeviceCapabilityChecker(context)
+
             if (!deviceChecker.canRunLlm()) {
-                Log.i(TAG, "기기 RAM 부족 — LLM 비활성화 (규칙 엔진만 사용)")
+                Log.i(TAG, "기기 RAM 부족 — LLM 비활성화")
+                _llmStatus.value = LlmStatus.UNAVAILABLE
                 return@launch
             }
 
             val llamaEngine = LlamaCppEngine(context, deviceChecker)
-            val loaded = llamaEngine.loadModel()
+            val loaded = llamaEngine.loadModel()  // 내부에서 pre-warm까지 실행
 
             if (loaded) {
                 llmEngine.set(LlmRiskEngine(llamaEngine))
-                Log.i(TAG, "✅ On-device LLM 준비 완료")
+                val elapsed = System.currentTimeMillis() - start
+                Log.i(TAG, "✅ On-device LLM 준비 완료 (${elapsed}ms, pre-warm 포함)")
+                _llmStatus.value = LlmStatus.READY
             } else {
-                Log.i(TAG, "모델 파일 없음 — LLM 비활성화 (규칙 엔진만 사용)")
+                Log.i(TAG, "모델 파일 없음 — LLM 비활성화")
+                _llmStatus.value = LlmStatus.UNAVAILABLE
             }
         }
     }

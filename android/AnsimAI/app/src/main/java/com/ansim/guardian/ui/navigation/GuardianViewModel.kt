@@ -15,6 +15,8 @@ import com.ansim.guardian.ai.llm.DartApiKeyStore
 import com.ansim.guardian.data.local.AlertLogEntity
 import com.ansim.guardian.data.local.AppDatabase
 import com.ansim.guardian.data.repository.ScamRepository
+import com.ansim.guardian.domain.engine.HybridRiskEngine
+import com.ansim.guardian.domain.engine.LlmStatus
 import com.ansim.guardian.domain.engine.LocalRagEngine
 import com.ansim.guardian.domain.engine.RuleBasedRiskEngine
 import com.ansim.guardian.domain.model.*
@@ -25,8 +27,10 @@ import com.ansim.guardian.monitoring.GuardianNotificationManager
 import com.ansim.guardian.monitoring.MonitoringPrefs
 import com.ansim.guardian.monitoring.RiskEvent
 import com.ansim.guardian.monitoring.RiskEventBus
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class GuardianUiState(
     val isAnalyzing: Boolean = false,
@@ -48,7 +52,9 @@ data class GuardianUiState(
     // 감시 On/Off
     val isMonitoringEnabled: Boolean = true,
     // 위험 기록 목록
-    val alertLogs: List<AlertLogEntity> = emptyList()
+    val alertLogs: List<AlertLogEntity> = emptyList(),
+    // LLM 상태
+    val llmStatus: LlmStatus = LlmStatus.LOADING
 )
 
 class GuardianViewModel(application: Application) : AndroidViewModel(application) {
@@ -61,6 +67,8 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     private val alertLogDao = db.alertLogDao()
     private val embeddingRepository = EmbeddingRepository(application, repository)
     private val ruleEngine = RuleBasedRiskEngine()
+    // 앱 전역 싱글톤 사용 — NotificationMonitorService와 동일한 인스턴스 공유
+    private val hybridEngine = com.ansim.guardian.AnsimApplication.instance.hybridEngine
     private val ragEngine = LocalRagEngine(repository, embeddingRepository)
     private val templateGenerator = TemplateExplanationGenerator()
     private val deviceChecker = DeviceCapabilityChecker(application)
@@ -89,6 +97,13 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             alertLogDao.getAllFlow().collect { logs ->
                 _uiState.value = _uiState.value.copy(alertLogs = logs)
+            }
+        }
+
+        // LLM 로딩 상태 구독
+        viewModelScope.launch {
+            hybridEngine.llmStatus.collect { status ->
+                _uiState.value = _uiState.value.copy(llmStatus = status)
             }
         }
 
@@ -142,14 +157,24 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
 
             val input = RiskInput(text = text, source = InputSource.MANUAL)
 
-            // 1단계: 규칙 엔진 즉시 실행
-            val riskResult = ruleEngine.analyze(input)
+            // 1단계: 규칙 엔진 즉시 실행 (항상 빠름)
+            val ruleResult = ruleEngine.analyze(input)
             _uiState.value = _uiState.value.copy(
                 isAnalyzing = false,
-                currentResult = riskResult,
+                currentResult = ruleResult,
                 isExplanationLoading = true,
                 isFinancialLoading = true
             )
+
+            // 1-2단계: 규칙이 SAFE → LLM 재검토 (IO 스레드 — ANR 방지)
+            val riskResult = if (ruleResult.riskLevel == RiskLevel.SAFE &&
+                                 _uiState.value.llmStatus == LlmStatus.READY) {
+                val llmResult = withContext(Dispatchers.IO) { hybridEngine.analyze(input) }
+                if (llmResult.riskLevel != RiskLevel.SAFE) {
+                    _uiState.value = _uiState.value.copy(currentResult = llmResult)
+                    llmResult
+                } else ruleResult
+            } else ruleResult
 
             // 위험 기록 저장 (주의 이상)
             if (riskResult.riskLevel.ordinal >= RiskLevel.CAUTION.ordinal) {
@@ -239,7 +264,8 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     fun simulateNotification(message: String, label: String = "카카오톡 알림 (테스트)") {
         viewModelScope.launch {
             val input = RiskInput(text = message, source = InputSource.NOTIFICATION_KAKAO, senderInfo = "테스트")
-            val result = ruleEngine.analyze(input)
+            // IO 스레드 — LLM JNI 블로킹 콜 ANR 방지
+            val result = withContext(Dispatchers.IO) { hybridEngine.analyze(input) }
             RiskEventBus.emit(RiskEvent(result, label))
         }
     }

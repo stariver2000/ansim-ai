@@ -5,6 +5,7 @@ import com.ansim.guardian.ai.llm.LlamaCppEngine
 import com.ansim.guardian.domain.model.*
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val TAG = "LlmRiskEngine"
 
@@ -27,7 +28,13 @@ class LlmRiskEngine(private val llamaEngine: LlamaCppEngine) : RiskEngine {
 
         return try {
             val prompt = buildPrompt(input.text)
-            val raw = llamaEngine.generate(prompt, maxTokens = 200)
+            // 15초 타임아웃 — 초과 시 SAFE 반환 (ANR 방지 + UX)
+            val raw = withTimeoutOrNull(15_000L) {
+                llamaEngine.generate(prompt, maxTokens = 60)
+            } ?: run {
+                Log.w(TAG, "LLM 타임아웃 (15초) — SAFE 반환")
+                return safeResult(input)
+            }
             Log.d(TAG, "LLM 원문 응답: $raw")
             parseResponse(raw, input)
         } catch (e: Exception) {
@@ -37,27 +44,18 @@ class LlmRiskEngine(private val llamaEngine: LlamaCppEngine) : RiskEngine {
     }
 
     // ── Qwen2.5 ChatML 포맷 프롬프트 ─────────────────────────────────
-    private fun buildPrompt(text: String): String = """
-<|im_start|>system
-당신은 한국 금융사기 탐지 AI입니다. 메시지를 분석하여 JSON으로만 응답합니다.<|im_end|>
+    private fun buildPrompt(text: String): String {
+        // 입력 텍스트를 200자로 제한 (토큰 절약)
+        val truncated = text.take(200)
+        return """<|im_start|>system
+금융사기 탐지 AI. JSON만 응답.<|im_end|>
 <|im_start|>user
-메시지: "$text"
-
-판단 기준:
-- 계좌번호(10자리↑숫자) + 금액(N만원) + 송금 요구 → 직거래사기 60~80점
-- 수사기관·금융기관 사칭 + 이체 요구 → 보이스피싱 70~90점
-- 가족인척 새 번호로 급전 요구 → 가족사칭 70~90점
-- 원금보장·고수익 투자 권유 → 투자사기 50~70점
-- 출금 전 세금·보증금 요구 → 코인사기 90~100점
-- 원격제어 앱 설치 요구 → 원격제어 90~100점
-- 일반 대화·정상 거래 → 안전 0~20점
-
-JSON만 응답(다른 텍스트 없이):
-{"score":0,"critical":false,"category":"안전","reason":"이유 한 줄"}
-
-category 값: 보이스피싱, 가족사칭, 투자사기, 직거래사기, 코인사기, 원격제어, 스미싱, 대출사기, 안전<|im_end|>
+"$truncated"
+사기유형: 보이스피싱/가족사칭/투자사기/코인사기/원격제어/스미싱/대출사기/안전
+JSON: {"score":0-100,"critical":false,"category":"유형","reason":"한줄이유"}<|im_end|>
 <|im_start|>assistant
 """.trimIndent()
+    }
 
     // ── JSON 파싱 → RiskResult ────────────────────────────────────────
     private fun parseResponse(raw: String, input: RiskInput): RiskResult {

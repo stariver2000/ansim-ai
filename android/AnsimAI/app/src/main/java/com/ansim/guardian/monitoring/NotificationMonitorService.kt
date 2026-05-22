@@ -6,7 +6,7 @@ import android.os.IBinder
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
-import com.ansim.guardian.domain.engine.HybridRiskEngine
+import com.ansim.guardian.AnsimApplication
 import com.ansim.guardian.domain.model.InputSource
 import com.ansim.guardian.domain.model.RiskInput
 import com.ansim.guardian.domain.model.RiskLevel
@@ -20,8 +20,8 @@ private const val TAG = "NotificationMonitor"
 class NotificationMonitorService : NotificationListenerService() {
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    // Context가 필요하므로 lazy로 초기화 (onCreate 이후 사용 가능)
-    private val engine by lazy { HybridRiskEngine(applicationContext) }
+    // 앱 전역 싱글톤 사용 — ViewModel과 동일한 LLM 인스턴스 (메모리 2배 방지)
+    private val engine by lazy { AnsimApplication.instance.hybridEngine }
 
     // 분석할 앱 목록
     private val monitoredPackages = setOf(
