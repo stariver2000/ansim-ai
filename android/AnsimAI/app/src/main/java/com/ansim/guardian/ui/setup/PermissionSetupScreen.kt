@@ -61,12 +61,28 @@ fun PermissionSetupScreen(
             emoji = "🛡️",
             isGranted = hasOverlayPermission,
             onRequest = {
-                context.startActivity(
-                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
-                        data = Uri.parse("package:com.ansim.guardian")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                val packageUri = Uri.parse("package:com.ansim.guardian")
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, packageUri).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                try {
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    // fallback: 앱 정보 페이지로 이동
+                    try {
+                        context.startActivity(
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                        )
+                    } catch (e2: Exception) {
+                        context.startActivity(
+                            Intent(Settings.ACTION_SETTINGS).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                        )
                     }
-                )
+                }
             }
         )
     )
