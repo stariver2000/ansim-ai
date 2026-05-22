@@ -161,13 +161,13 @@ private fun MonitoringStatusCard(
                                     color = textColor
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                Text("AI 분석 준비 중...", style = MaterialTheme.typography.labelSmall, color = textColor)
+                                Text("AI 준비 중...", style = MaterialTheme.typography.labelSmall, color = textColor)
                             }
                             LlmStatus.READY -> {
-                                Text("🤖 AI 분석 준비 완료", style = MaterialTheme.typography.labelSmall, color = textColor)
+                                Text("🤖 Gemini AI 분석 사용 중", style = MaterialTheme.typography.labelSmall, color = textColor)
                             }
                             LlmStatus.UNAVAILABLE -> {
-                                Text("📋 규칙 기반 감지", style = MaterialTheme.typography.labelSmall, color = textColor)
+                                Text("📋 규칙 기반 감지 (오프라인)", style = MaterialTheme.typography.labelSmall, color = textColor)
                             }
                         }
                     }
