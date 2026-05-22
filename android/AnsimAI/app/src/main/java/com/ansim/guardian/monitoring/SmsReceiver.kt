@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
 import android.util.Log
-import com.ansim.guardian.domain.engine.RuleBasedRiskEngine
+import com.ansim.guardian.AnsimApplication
 import com.ansim.guardian.domain.model.InputSource
 import com.ansim.guardian.domain.model.RiskInput
 import com.ansim.guardian.domain.model.RiskLevel
@@ -17,8 +17,7 @@ private const val TAG = "SmsReceiver"
 
 class SmsReceiver : BroadcastReceiver() {
 
-    private val scope = CoroutineScope(Dispatchers.Default)
-    private val ruleEngine = RuleBasedRiskEngine()
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
@@ -30,9 +29,9 @@ class SmsReceiver : BroadcastReceiver() {
         val body = messages.joinToString("") { it.messageBody ?: "" }
 
         if (body.isBlank()) return
-        if (!MonitoringPrefs.isEnabled(context)) return  // 감시 OFF
+        if (!MonitoringPrefs.isEnabled(context)) return
 
-        Log.d(TAG, "SMS 수신: $sender → $body")
+        Log.d(TAG, "SMS 수신: $sender")
 
         scope.launch {
             val input = RiskInput(
@@ -40,12 +39,17 @@ class SmsReceiver : BroadcastReceiver() {
                 source = InputSource.SMS,
                 senderInfo = sender
             )
-            val result = ruleEngine.analyze(input)
+
+            // hybridEngine 사용 → CAUTION 이상이면 Gemini 서버 재검토
+            val result = AnsimApplication.instance.hybridEngine.analyze(input)
 
             if (result.riskLevel.ordinal >= RiskLevel.CAUTION.ordinal) {
-                Log.i(TAG, "SMS 위험 감지 [${result.riskLevel.label}]: $body")
+                Log.i(TAG, "SMS 위험 감지 [${result.riskLevel.label} / ${result.analyzedBy()}]: $sender")
                 RiskEventBus.emit(RiskEvent(result, "문자 (${sender})"))
             }
         }
     }
+
+    private fun com.ansim.guardian.domain.model.RiskResult.analyzedBy() =
+        if (llmReason != null) "Gemini" else "규칙"
 }
