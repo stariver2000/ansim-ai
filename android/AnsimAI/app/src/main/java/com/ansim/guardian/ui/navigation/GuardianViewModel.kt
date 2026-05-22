@@ -91,11 +91,15 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
 
     fun checkPermissions() {
         val app = getApplication<Application>()
+        val enabledListeners = Settings.Secure.getString(
+            app.contentResolver, "enabled_notification_listeners"
+        )
         _uiState.value = _uiState.value.copy(
             hasOverlayPermission = Settings.canDrawOverlays(app),
             hasSmsPermission = ContextCompat.checkSelfPermission(
                 app, android.Manifest.permission.RECEIVE_SMS
-            ) == PackageManager.PERMISSION_GRANTED
+            ) == PackageManager.PERMISSION_GRANTED,
+            hasNotificationPermission = enabledListeners?.contains(app.packageName) == true
         )
     }
 

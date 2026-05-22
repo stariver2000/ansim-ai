@@ -1,9 +1,16 @@
 package com.ansim.guardian.ui.navigation
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -89,10 +96,30 @@ fun AppNavigation(
         }
 
         composable(Screen.PermissionSetup.route) {
+            val lifecycleOwner = LocalLifecycleOwner.current
+
+            // 설정 다녀온 후 화면 복귀 시 권한 상태 자동 갱신
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        viewModel.checkPermissions()
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
+
+            val smsLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { viewModel.checkPermissions() }
+
             PermissionSetupScreen(
                 onComplete = {
                     viewModel.checkPermissions()
                     navController.popBackStack()
+                },
+                onRequestSmsPermission = {
+                    smsLauncher.launch(Manifest.permission.RECEIVE_SMS)
                 },
                 hasNotificationPermission = uiState.hasNotificationPermission,
                 hasSmsPermission = uiState.hasSmsPermission,

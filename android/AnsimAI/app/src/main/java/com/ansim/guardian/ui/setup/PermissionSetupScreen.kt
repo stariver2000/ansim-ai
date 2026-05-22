@@ -1,6 +1,7 @@
 package com.ansim.guardian.ui.setup
 
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +29,7 @@ data class PermissionItem(
 @Composable
 fun PermissionSetupScreen(
     onComplete: () -> Unit,
+    onRequestSmsPermission: () -> Unit = {},
     hasNotificationPermission: Boolean,
     hasSmsPermission: Boolean,
     hasOverlayPermission: Boolean
@@ -51,7 +53,7 @@ fun PermissionSetupScreen(
             description = "수신된 문자 메시지에서 스미싱·사기를 탐지해요",
             emoji = "💬",
             isGranted = hasSmsPermission,
-            onRequest = { /* Activity에서 requestPermissions 처리 */ }
+            onRequest = onRequestSmsPermission
         ),
         PermissionItem(
             title = "다른 앱 위에 표시",
@@ -61,6 +63,7 @@ fun PermissionSetupScreen(
             onRequest = {
                 context.startActivity(
                     Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                        data = Uri.parse("package:com.ansim.guardian")
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     }
                 )
