@@ -38,6 +38,7 @@ class NotificationMonitorService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         sbn ?: return
+        if (!MonitoringPrefs.isEnabled(applicationContext)) return  // 감시 OFF
         if (sbn.packageName !in monitoredPackages) return
 
         val extras = sbn.notification.extras

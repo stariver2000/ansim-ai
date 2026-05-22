@@ -12,6 +12,9 @@ class RuleBasedRiskEngine : RiskEngine {
     // 금액: "N만원", "N천원" 형태
     private val moneyAmountRegex = Regex("""[1-9]\d*\s*만\s*원|[1-9]\d*\s*천\s*원""")
 
+    // URL: http / https 링크 감지
+    private val urlRegex = Regex("""https?://\S+""", RegexOption.IGNORE_CASE)
+
     override suspend fun analyze(input: RiskInput): RiskResult {
         val text = input.text.lowercase()
         val detectedSignals = mutableListOf<DetectedSignal>()
@@ -33,6 +36,55 @@ class RuleBasedRiskEngine : RiskEngine {
                 totalScore += rule.score
                 if (rule.isCriticalTrigger) isCritical = true
             }
+        }
+
+        // ── URL + 긴급성 + 계정위협 복합 감지 (스미싱 핵심 패턴) ───────────
+        val hasUrl = urlRegex.containsMatchIn(input.text)
+        val hasAccountThreat = listOf(
+            "계정", "정지", "만료", "일시정지", "차단", "중지"
+        ).count { text.contains(it) } >= 2
+        val hasUrgency = listOf(
+            "즉시", "긴급", "지금 바로", "지금즉시", "바로 지금", "빨리", "당장"
+        ).any { text.contains(it) }
+        val hasAuthRequest = listOf(
+            "본인 인증", "본인인증", "인증을 완료", "인증하세요", "로그인", "개인정보"
+        ).any { text.contains(it) }
+
+        if (hasUrl && (hasAccountThreat || hasAuthRequest) && hasUrgency) {
+            detectedSignals.add(
+                DetectedSignal(
+                    matchedKeyword = "URL+계정위협+긴급",
+                    category = SignalCategory.SMISHING,
+                    score = 75,
+                    description = "링크 + 계정 위협 + 긴급 유도 — 스미싱 전형 패턴",
+                    isCriticalTrigger = false
+                )
+            )
+            totalScore += 75
+        } else if (hasUrl && (hasAccountThreat || hasAuthRequest)) {
+            // 긴급성 없어도 URL + 계정위협이면 위험
+            detectedSignals.add(
+                DetectedSignal(
+                    matchedKeyword = "URL+계정위협",
+                    category = SignalCategory.SMISHING,
+                    score = 55,
+                    description = "링크 + 계정 위협 감지 — 스미싱 의심",
+                    isCriticalTrigger = false
+                )
+            )
+            totalScore += 55
+        } else if (hasUrl && hasUrgency) {
+            // URL + 긴급성
+            detectedSignals.add(
+                DetectedSignal(
+                    matchedKeyword = "URL+긴급",
+                    category = SignalCategory.SMISHING,
+                    score = 35,
+                    description = "링크 + 긴급 유도 — 스미싱 의심",
+                    isCriticalTrigger = false
+                )
+            )
+            totalScore += 35
         }
 
         // ── 계좌번호 + 금액 + 송금 복합 감지 (직거래 사기 핵심 패턴) ──────
@@ -160,10 +212,16 @@ class RuleBasedRiskEngine : RiskEngine {
         RiskRule(listOf("앱 설치해 주세요", "앱을 설치해", "설치해 주세요", "깔아주세요", "깔아줘", "앱 깔아"), SignalCategory.REMOTE_CONTROL, 40, "출처 불명 앱 설치 유도"),
 
         // ── 스미싱 ─────────────────────────────────────────────
-        RiskRule(listOf("택배 조회", "택배를 확인", "배송 조회"), SignalCategory.SMISHING, 25, "택배 사칭 링크"),
+        RiskRule(listOf("택배 조회", "택배를 확인", "배송 조회", "배송이 완료"), SignalCategory.SMISHING, 25, "택배 사칭 링크"),
         RiskRule(listOf("청첩장", "부고", "초대장"), SignalCategory.SMISHING, 25, "청첩장/부고 사칭 링크"),
-        RiskRule(listOf("클릭하세요", "확인하세요", "지금 바로 확인"), SignalCategory.SMISHING, 15, "링크 클릭 유도"),
-        RiskRule(listOf("http://", "bit.ly", "tinyurl", "goo.gl"), SignalCategory.SMISHING, 20, "단축 URL"),
+        RiskRule(listOf("클릭하세요", "확인하세요", "지금 바로 확인", "지금 확인"), SignalCategory.SMISHING, 15, "링크 클릭 유도"),
+        RiskRule(listOf("http://", "https://", "bit.ly", "tinyurl", "goo.gl"), SignalCategory.SMISHING, 20, "URL 링크 포함"),
+        // 계정·결제 위협 패턴 (피싱 공통)
+        RiskRule(listOf("계정이 정지", "계정 정지", "계정 일시 정지", "일시 정지", "계정이 일시"), SignalCategory.SMISHING, 40, "계정 정지 위협"),
+        RiskRule(listOf("결제 정보가 만료", "결제 정보 만료", "카드가 만료", "결제 실패", "자동 결제가 실패"), SignalCategory.SMISHING, 35, "결제 만료·실패 사칭"),
+        RiskRule(listOf("본인 인증", "본인인증을", "인증을 완료", "인증이 필요"), SignalCategory.SMISHING, 35, "본인 인증 요구"),
+        RiskRule(listOf("지금 즉시", "즉시 완료", "즉시 처리", "즉시 확인", "긴급 안내"), SignalCategory.SMISHING, 25, "긴급 유도"),
+        RiskRule(listOf("계정이 만료", "서비스가 정지", "서비스 이용이 제한"), SignalCategory.SMISHING, 35, "서비스 중단 위협"),
 
         // ── 대출 사기 ──────────────────────────────────────────
         RiskRule(listOf("저금리 대출", "무직자 대출", "신용불량자 대출"), SignalCategory.LOAN_FRAUD, 30, "불법 대출 광고"),

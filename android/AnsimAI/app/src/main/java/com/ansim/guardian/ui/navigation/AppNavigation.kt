@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.ansim.guardian.ui.alertlog.AlertLogScreen
 import com.ansim.guardian.ui.financial.FinancialRiskScreen
 import com.ansim.guardian.ui.guardian.GuardianSetupScreen
 import com.ansim.guardian.ui.home.HomeScreen
@@ -26,6 +27,7 @@ sealed class Screen(val route: String) {
     object FinancialRisk : Screen("financial_risk")
     object GuardianSetup : Screen("guardian_setup")
     object PermissionSetup : Screen("permission_setup")
+    object AlertLog : Screen("alert_log")
 }
 
 @Composable
@@ -50,10 +52,23 @@ fun AppNavigation(
                 },
                 onOpenGuardianSetup = { navController.navigate(Screen.GuardianSetup.route) },
                 onOpenPermissionSetup = { navController.navigate(Screen.PermissionSetup.route) },
+                onOpenAlertLog = { navController.navigate(Screen.AlertLog.route) },
                 onSimulateNotification = { viewModel.simulateNotification(it) },
+                onToggleMonitoring = { viewModel.toggleMonitoring() },
                 isLoading = uiState.isAnalyzing,
                 guardianName = uiState.guardianName,
-                isGuardianConfigured = uiState.guardianPhone.isNotBlank()
+                isGuardianConfigured = uiState.guardianPhone.isNotBlank(),
+                isMonitoringEnabled = uiState.isMonitoringEnabled,
+                alertLogCount = uiState.alertLogs.size
+            )
+        }
+
+        composable(Screen.AlertLog.route) {
+            AlertLogScreen(
+                logs = uiState.alertLogs,
+                onDeleteLog = { viewModel.deleteAlertLog(it) },
+                onClearAll = { viewModel.clearAllAlertLogs() },
+                onBack = { navController.popBackStack() }
             )
         }
 

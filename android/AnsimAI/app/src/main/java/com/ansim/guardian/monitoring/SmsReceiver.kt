@@ -30,6 +30,7 @@ class SmsReceiver : BroadcastReceiver() {
         val body = messages.joinToString("") { it.messageBody ?: "" }
 
         if (body.isBlank()) return
+        if (!MonitoringPrefs.isEnabled(context)) return  // 감시 OFF
 
         Log.d(TAG, "SMS 수신: $sender → $body")
 

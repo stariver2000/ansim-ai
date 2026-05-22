@@ -21,10 +21,14 @@ fun HomeScreen(
     onAnalyze: (String) -> Unit,
     onOpenGuardianSetup: () -> Unit = {},
     onOpenPermissionSetup: () -> Unit = {},
+    onOpenAlertLog: () -> Unit = {},
     onSimulateNotification: (String) -> Unit = {},
+    onToggleMonitoring: () -> Unit = {},
     isLoading: Boolean = false,
     guardianName: String = "",
-    isGuardianConfigured: Boolean = false
+    isGuardianConfigured: Boolean = false,
+    isMonitoringEnabled: Boolean = true,
+    alertLogCount: Int = 0
 ) {
     var inputText by remember { mutableStateOf("") }
 
@@ -49,8 +53,23 @@ fun HomeScreen(
             }
         }
 
-        // 상태 표시
-        StatusCard()
+        // 위험 기록 버튼
+        OutlinedButton(
+            onClick = onOpenAlertLog,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = if (alertLogCount > 0) "⚠️ 위험 감지 기록  (${alertLogCount}건)" else "⚠️ 위험 감지 기록",
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+
+        // 감시 On/Off + 상태 카드
+        MonitoringStatusCard(
+            isEnabled = isMonitoringEnabled,
+            onToggle = onToggleMonitoring
+        )
 
         // 텍스트 입력
         InputSection(
@@ -95,31 +114,46 @@ private fun HeaderSection() {
 }
 
 @Composable
-private fun StatusCard() {
+private fun MonitoringStatusCard(
+    isEnabled: Boolean,
+    onToggle: () -> Unit
+) {
+    val bgColor = if (isEnabled) SafeGreenLight else Color(0xFFF5F5F5)
+    val textColor = if (isEnabled) SafeGreen else TextSecondary
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SafeGreenLight)
+        colors = CardDefaults.cardColors(containerColor = bgColor)
     ) {
         Row(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "✅", fontSize = 32.sp)
+            Text(text = if (isEnabled) "🛡️" else "😴", fontSize = 32.sp)
             Spacer(modifier = Modifier.width(12.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "지금은 안전해요",
+                    text = if (isEnabled) "감시 중이에요" else "감시가 꺼져 있어요",
                     style = MaterialTheme.typography.titleMedium,
-                    color = SafeGreen,
+                    color = textColor,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "수상한 내용이 있으면 아래에서 확인하세요",
+                    text = if (isEnabled) "문자·알림을 실시간으로 확인하고 있어요"
+                           else "켜면 문자와 알림을 자동으로 확인해요",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = SafeGreen
+                    color = textColor
                 )
             }
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = { onToggle() },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = SafeGreen
+                )
+            )
         }
     }
 }

@@ -86,7 +86,8 @@ category 값: 보이스피싱, 가족사칭, 투자사기, 직거래사기, 코�
                 totalScore = score,
                 detectedSignals = signals,
                 primaryCategory = signals.firstOrNull()?.category,
-                isCriticalOverride = judgement.critical
+                isCriticalOverride = judgement.critical,
+                llmReason = if (score > 20) judgement.reason else null
             )
         } catch (e: Exception) {
             Log.w(TAG, "JSON 파싱 실패: ${e.message}")

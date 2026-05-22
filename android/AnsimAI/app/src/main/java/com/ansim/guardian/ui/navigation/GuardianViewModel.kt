@@ -12,6 +12,7 @@ import com.ansim.guardian.ai.LocalLlmManager
 import com.ansim.guardian.ai.TemplateExplanationGenerator
 import com.ansim.guardian.ai.embedding.EmbeddingRepository
 import com.ansim.guardian.ai.llm.DartApiKeyStore
+import com.ansim.guardian.data.local.AlertLogEntity
 import com.ansim.guardian.data.local.AppDatabase
 import com.ansim.guardian.data.repository.ScamRepository
 import com.ansim.guardian.domain.engine.LocalRagEngine
@@ -21,6 +22,7 @@ import com.ansim.guardian.financial.DartApiClient
 import com.ansim.guardian.financial.FinancialRiskResult
 import com.ansim.guardian.financial.StockRiskAnalyzer
 import com.ansim.guardian.monitoring.GuardianNotificationManager
+import com.ansim.guardian.monitoring.MonitoringPrefs
 import com.ansim.guardian.monitoring.RiskEvent
 import com.ansim.guardian.monitoring.RiskEventBus
 import kotlinx.coroutines.flow.*
@@ -42,7 +44,11 @@ data class GuardianUiState(
     val guardianName: String = "",
     val guardianPhone: String = "",
     // 백그라운드 이벤트 (서비스에서 감지)
-    val backgroundRiskEvent: RiskEvent? = null
+    val backgroundRiskEvent: RiskEvent? = null,
+    // 감시 On/Off
+    val isMonitoringEnabled: Boolean = true,
+    // 위험 기록 목록
+    val alertLogs: List<AlertLogEntity> = emptyList()
 )
 
 class GuardianViewModel(application: Application) : AndroidViewModel(application) {
@@ -52,6 +58,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
 
     private val db = AppDatabase.getInstance(application)
     private val repository = ScamRepository(db.scamCaseDao())
+    private val alertLogDao = db.alertLogDao()
     private val embeddingRepository = EmbeddingRepository(application, repository)
     private val ruleEngine = RuleBasedRiskEngine()
     private val ragEngine = LocalRagEngine(repository, embeddingRepository)
@@ -73,6 +80,15 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             RiskEventBus.events.collect { event ->
                 _uiState.value = _uiState.value.copy(backgroundRiskEvent = event)
                 guardianManager.notifyAll(event.riskResult, event.sourceLabel)
+                // 위험 기록 자동 저장
+                saveAlertLog(event.riskResult, event.sourceLabel)
+            }
+        }
+
+        // 위험 기록 DB 실시간 구독
+        viewModelScope.launch {
+            alertLogDao.getAllFlow().collect { logs ->
+                _uiState.value = _uiState.value.copy(alertLogs = logs)
             }
         }
 
@@ -85,7 +101,8 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(
             hasOverlayPermission = Settings.canDrawOverlays(app),
             guardianName = guardianManager.guardianName,
-            guardianPhone = guardianManager.guardianPhone
+            guardianPhone = guardianManager.guardianPhone,
+            isMonitoringEnabled = MonitoringPrefs.isEnabled(app)
         )
         checkPermissions()
     }
@@ -105,6 +122,13 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         return androidx.core.app.NotificationManagerCompat
             .getEnabledListenerPackages(app)
             .contains(app.packageName)
+    }
+
+    fun toggleMonitoring() {
+        val app = getApplication<Application>()
+        val newValue = !_uiState.value.isMonitoringEnabled
+        MonitoringPrefs.setEnabled(app, newValue)
+        _uiState.value = _uiState.value.copy(isMonitoringEnabled = newValue)
     }
 
     fun analyze(text: String) {
@@ -127,6 +151,11 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 isFinancialLoading = true
             )
 
+            // 위험 기록 저장 (주의 이상)
+            if (riskResult.riskLevel.ordinal >= RiskLevel.CAUTION.ordinal) {
+                saveAlertLog(riskResult, "직접 입력")
+            }
+
             // 2단계: RAG 유사 사례 검색
             val similarCases = ragEngine.retrieveByCategoryAndText(
                 category = riskResult.primaryCategory,
@@ -140,7 +169,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 isExplanationLoading = false
             )
 
-            // 4단계: 금융 데이터 분석 (비동기, MVP 4)
+            // 4단계: 금융 데이터 분석 (비동기)
             val financialResults = stockAnalyzer.analyze(text, riskResult)
             _uiState.value = _uiState.value.copy(
                 financialResults = financialResults,
@@ -152,6 +181,41 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 guardianManager.notifyAll(riskResult, "직접 입력")
             }
         }
+    }
+
+    /** 위험 기록을 DB에 저장 */
+    private suspend fun saveAlertLog(result: RiskResult, sourceLabel: String) {
+        if (result.riskLevel == RiskLevel.SAFE) return
+
+        val category = result.primaryCategory?.displayName ?: "알 수 없음"
+        val reason = when {
+            result.llmReason != null -> result.llmReason
+            result.detectedSignals.isNotEmpty() ->
+                result.detectedSignals.first().description
+            else -> "위험 신호 감지됨"
+        }
+        val method = if (result.isLlmDetected) "AI 분석" else "규칙 기반"
+
+        alertLogDao.insert(
+            AlertLogEntity(
+                timestamp = result.timestamp,
+                riskLevel = result.riskLevel.name,
+                riskEmoji = result.riskLevel.emoji,
+                category = category,
+                sourceLabel = sourceLabel,
+                contentPreview = result.input.text.take(120),
+                detectionMethod = method,
+                reason = reason
+            )
+        )
+    }
+
+    fun deleteAlertLog(id: Long) {
+        viewModelScope.launch { alertLogDao.deleteById(id) }
+    }
+
+    fun clearAllAlertLogs() {
+        viewModelScope.launch { alertLogDao.deleteAll() }
     }
 
     fun saveGuardian(name: String, phone: String) {
@@ -184,7 +248,9 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = GuardianUiState(
             guardianName = guardianManager.guardianName,
             guardianPhone = guardianManager.guardianPhone,
-            hasOverlayPermission = Settings.canDrawOverlays(getApplication())
+            hasOverlayPermission = Settings.canDrawOverlays(getApplication()),
+            isMonitoringEnabled = _uiState.value.isMonitoringEnabled,
+            alertLogs = _uiState.value.alertLogs
         )
     }
 }
