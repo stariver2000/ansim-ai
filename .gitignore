@@ -15,6 +15,10 @@ android/AnsimAI/local.properties
 .DS_Store
 
 # API Keys (절대 커밋하면 안 됨)
+backend/.env
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
 local.properties
 *.keystore
 google-services.json
