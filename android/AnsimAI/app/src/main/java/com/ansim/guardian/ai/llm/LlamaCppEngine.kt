@@ -38,12 +38,12 @@ class LlamaCppEngine(
         fun tryLoadLibrary(): Boolean {
             if (libraryLoaded) return true
             return try {
-                System.loadLibrary("llama")
+                // llama + ggml이 ansim_llm_jni에 정적 링크됨 → 하나만 로드
                 System.loadLibrary("ansim_llm_jni")
                 libraryLoaded = true
                 true
             } catch (e: UnsatisfiedLinkError) {
-                Log.w(TAG, "llama.cpp 네이티브 라이브러리 없음. 3단계 빌드 필요.")
+                Log.w(TAG, "llama.cpp 네이티브 라이브러리 없음: ${e.message}")
                 false
             }
         }
@@ -68,10 +68,15 @@ class LlamaCppEngine(
         if (tier == DeviceTier.LOW) return false
 
         val modelFileName = selectModelFile(tier)
-        val modelPath = context.filesDir.absolutePath + "/" + modelFileName
 
-        if (!java.io.File(modelPath).exists()) {
-            Log.w(TAG, "모델 파일 없음: $modelPath")
+        // 1순위: 앱 내부 저장소 (배포 시)
+        // 2순위: /sdcard (테스트 시 adb push로 복사)
+        val modelPath = listOf(
+            context.filesDir.absolutePath + "/" + modelFileName,
+            "/sdcard/${modelFileName.lowercase()}",
+            "/sdcard/$modelFileName"
+        ).firstOrNull { java.io.File(it).exists() } ?: run {
+            Log.w(TAG, "모델 파일 없음: $modelFileName")
             return false
         }
 

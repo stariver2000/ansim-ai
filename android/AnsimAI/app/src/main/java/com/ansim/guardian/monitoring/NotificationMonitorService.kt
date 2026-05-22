@@ -6,7 +6,7 @@ import android.os.IBinder
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
-import com.ansim.guardian.domain.engine.RuleBasedRiskEngine
+import com.ansim.guardian.domain.engine.HybridRiskEngine
 import com.ansim.guardian.domain.model.InputSource
 import com.ansim.guardian.domain.model.RiskInput
 import com.ansim.guardian.domain.model.RiskLevel
@@ -20,7 +20,8 @@ private const val TAG = "NotificationMonitor"
 class NotificationMonitorService : NotificationListenerService() {
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    private val ruleEngine = RuleBasedRiskEngine()
+    // Context가 필요하므로 lazy로 초기화 (onCreate 이후 사용 가능)
+    private val engine by lazy { HybridRiskEngine(applicationContext) }
 
     // 분석할 앱 목록
     private val monitoredPackages = setOf(
@@ -63,7 +64,7 @@ class NotificationMonitorService : NotificationListenerService() {
 
     private suspend fun analyze(text: String, source: InputSource, senderInfo: String) {
         val input = RiskInput(text = text, source = source, senderInfo = senderInfo)
-        val result = ruleEngine.analyze(input)
+        val result = engine.analyze(input)
 
         // 주의 이상일 때만 이벤트 발행
         if (result.riskLevel.ordinal >= RiskLevel.CAUTION.ordinal) {

@@ -28,6 +28,10 @@ android {
         // local.properties에 다음 한 줄 추가:  DART_API_KEY=your_key_here
         val dartKey = project.findProperty("DART_API_KEY")?.toString() ?: ""
         buildConfigField("String", "DART_API_KEY", "\"$dartKey\"")
+
+        ndk {
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
     }
 
     buildFeatures {
@@ -64,13 +68,12 @@ android {
         jvmTarget = "17"
     }
 
-    // MVP 3: JNI (llama.cpp 연동 후 활성화)
-    // externalNativeBuild {
-    //     cmake {
-    //         path = file("src/main/cpp/CMakeLists.txt")
-    //         version = "3.22.1"
-    //     }
-    // }
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
 }
 
 dependencies {

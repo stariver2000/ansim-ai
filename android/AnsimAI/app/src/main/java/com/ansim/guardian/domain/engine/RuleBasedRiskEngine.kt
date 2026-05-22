@@ -6,6 +6,12 @@ class RuleBasedRiskEngine : RiskEngine {
 
     private val rules: List<RiskRule> = buildRules()
 
+    // 계좌번호: 10자리 이상 연속 숫자 (카카오뱅크·토스뱅크 포함)
+    private val accountNumberRegex = Regex("""\d{10,}""")
+
+    // 금액: "N만원", "N천원" 형태
+    private val moneyAmountRegex = Regex("""[1-9]\d*\s*만\s*원|[1-9]\d*\s*천\s*원""")
+
     override suspend fun analyze(input: RiskInput): RiskResult {
         val text = input.text.lowercase()
         val detectedSignals = mutableListOf<DetectedSignal>()
@@ -27,6 +33,25 @@ class RuleBasedRiskEngine : RiskEngine {
                 totalScore += rule.score
                 if (rule.isCriticalTrigger) isCritical = true
             }
+        }
+
+        // ── 계좌번호 + 금액 + 송금 복합 감지 (직거래 사기 핵심 패턴) ──────
+        // ex) "3333100399250 카카오뱅크 여기로 5만원 보내주시면 택배로 보내드리겠습니다"
+        val hasAccountNumber = accountNumberRegex.containsMatchIn(input.text)
+        val hasMoneyAmount   = moneyAmountRegex.containsMatchIn(input.text)
+        val hasSendKeyword   = listOf("보내", "입금", "이체", "송금").any { text.contains(it) }
+
+        if (hasAccountNumber && hasMoneyAmount && hasSendKeyword) {
+            detectedSignals.add(
+                DetectedSignal(
+                    matchedKeyword = "계좌번호+금액+송금",
+                    category = SignalCategory.MARKETPLACE_FRAUD,
+                    score = 65,
+                    description = "계좌번호·금액·송금 요구 동시 감지 — 직거래 선입금 사기 의심",
+                    isCriticalTrigger = false
+                )
+            )
+            totalScore += 65
         }
 
         // 복합 조건 즉시 위험 판정
@@ -143,7 +168,15 @@ class RuleBasedRiskEngine : RiskEngine {
         // ── 대출 사기 ──────────────────────────────────────────
         RiskRule(listOf("저금리 대출", "무직자 대출", "신용불량자 대출"), SignalCategory.LOAN_FRAUD, 30, "불법 대출 광고"),
         RiskRule(listOf("선이자", "선수수료", "보증보험료 먼저"), SignalCategory.LOAN_FRAUD, 50, "선납금 요구"),
-        RiskRule(listOf("대출 승인", "대출 확정"), SignalCategory.LOAN_FRAUD, 20, "대출 승인 사칭")
+        RiskRule(listOf("대출 승인", "대출 확정"), SignalCategory.LOAN_FRAUD, 20, "대출 승인 사칭"),
+
+        // ── 직거래 사기 (중고거래 선입금 사기) ───────────────────
+        // 복합 감지(계좌번호+금액+송금)가 주 탐지 수단이고, 아래는 보조 키워드
+        RiskRule(listOf("선입금", "선 입금"), SignalCategory.MARKETPLACE_FRAUD, 45, "선입금 요구"),
+        RiskRule(listOf("입금 확인 후 발송", "입금 후 발송", "입금되면 발송", "입금 후 배송"), SignalCategory.MARKETPLACE_FRAUD, 40, "선입금 조건부 발송 약속"),
+        RiskRule(listOf("입금해주시면", "보내주시면 바로", "입금하시면 바로"), SignalCategory.MARKETPLACE_FRAUD, 35, "정중한 선입금 요구"),
+        RiskRule(listOf("무통장입금", "무통장 입금"), SignalCategory.MARKETPLACE_FRAUD, 20, "무통장 입금 요구"),
+        RiskRule(listOf("당근이에요", "번개장터", "중고나라"), SignalCategory.MARKETPLACE_FRAUD, 10, "중고거래 플랫폼 언급")
     )
 }
 

@@ -9,5 +9,7 @@ enum class SignalCategory(val displayName: String) {
     REMOTE_CONTROL("원격제어 사기"),
     SMISHING("스미싱"),
     LOAN_FRAUD("대출 사기"),
-    INSTITUTION_IMPERSONATION("기관 사칭")
+    INSTITUTION_IMPERSONATION("기관 사칭"),
+    MARKETPLACE_FRAUD("직거래 사기"),  // 중고거래·직거래 선입금 사기
+    LLM_DETECTED("AI 탐지")           // 규칙 미탐 → LLM이 잡은 경우
 }

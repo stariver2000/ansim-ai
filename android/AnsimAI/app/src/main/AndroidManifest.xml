@@ -3,6 +3,10 @@
 
     <!-- ── MVP 1: 텍스트 분석 ── -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- ── MVP 3: LLM 모델 파일 읽기 (테스트용 /sdcard 접근) ── -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- ── MVP 2: 알림 모니터링 (NotificationListenerService는 별도 권한 승인 필요) ── -->
