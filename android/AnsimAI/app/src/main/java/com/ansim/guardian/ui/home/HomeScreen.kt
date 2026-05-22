@@ -21,6 +21,7 @@ fun HomeScreen(
     onAnalyze: (String) -> Unit,
     onOpenGuardianSetup: () -> Unit = {},
     onOpenPermissionSetup: () -> Unit = {},
+    onSimulateNotification: (String) -> Unit = {},
     isLoading: Boolean = false,
     guardianName: String = "",
     isGuardianConfigured: Boolean = false
@@ -58,6 +59,9 @@ fun HomeScreen(
             onAnalyze = { if (inputText.isNotBlank()) onAnalyze(inputText) },
             isLoading = isLoading
         )
+
+        // 배경 감지 테스트
+        TestSection(onSimulate = onSimulateNotification)
 
         // 안내 문구
         GuideSection()
@@ -174,6 +178,61 @@ private fun InputSection(
                     color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TestSection(onSimulate: (String) -> Unit) {
+    val testCases = listOf(
+        "🏛️ 보이스피싱" to "금감원입니다. 고객님 계좌가 범죄에 연루되었습니다. 자산을 보호하려면 안전계좌로 즉시 이체해 주세요.",
+        "👨‍👩‍👧 가족 사칭" to "엄마 나야. 폰 고장났어. 급하니까 아빠한테 말하지 말고 이 계좌로 50만원 보내줘.",
+        "💰 투자 사기" to "오늘만 가능합니다. 내부정보로 내일 상한가 확실합니다. 원금보장에 수익보장. VIP방 초대해드릴게요.",
+        "🪙 코인 사기" to "수익이 났어요! 출금하려면 세금 먼저 입금하셔야 합니다. 보증금 입금 후 전액 출금 가능합니다."
+    )
+
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "🧪 배경 감지 테스트",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF795548)
+                )
+                TextButton(onClick = { expanded = !expanded }) {
+                    Text(if (expanded) "접기" else "펼치기", color = Color(0xFF795548))
+                }
+            }
+            if (expanded) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "버튼을 누르면 카카오톡 알림이 수신된 것처럼 시뮬레이션합니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF9E9E9E)
+                )
+                Spacer(Modifier.height(12.dp))
+                testCases.forEach { (label, message) ->
+                    OutlinedButton(
+                        onClick = { onSimulate(message) },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF795548))
+                    ) {
+                        Text(label, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
         }
     }

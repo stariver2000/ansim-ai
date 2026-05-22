@@ -43,6 +43,7 @@ fun AppNavigation(
                 },
                 onOpenGuardianSetup = { navController.navigate(Screen.GuardianSetup.route) },
                 onOpenPermissionSetup = { navController.navigate(Screen.PermissionSetup.route) },
+                onSimulateNotification = { viewModel.simulateNotification(it) },
                 isLoading = uiState.isAnalyzing,
                 guardianName = uiState.guardianName,
                 isGuardianConfigured = uiState.guardianPhone.isNotBlank()

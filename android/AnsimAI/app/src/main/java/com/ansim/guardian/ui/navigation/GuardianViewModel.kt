@@ -164,6 +164,14 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(backgroundRiskEvent = null)
     }
 
+    fun simulateNotification(message: String, label: String = "카카오톡 알림 (테스트)") {
+        viewModelScope.launch {
+            val input = RiskInput(text = message, source = InputSource.NOTIFICATION_KAKAO, senderInfo = "테스트")
+            val result = ruleEngine.analyze(input)
+            RiskEventBus.emit(RiskEvent(result, label))
+        }
+    }
+
     fun reset() {
         _uiState.value = GuardianUiState(
             guardianName = guardianManager.guardianName,
