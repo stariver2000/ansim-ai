@@ -38,19 +38,25 @@ class HybridRiskEngine(context: Context) : RiskEngine {
         // 1단계: 규칙 엔진 (즉시, 오프라인도 동작)
         val ruleResult = ruleEngine.analyze(input)
 
-        // 규칙 엔진이 DANGER 이상 → 확신 있으므로 서버 불필요
-        if (ruleResult.riskLevel.ordinal >= RiskLevel.DANGER.ordinal) {
-            Log.d(TAG, "규칙 탐지 (DANGER+): ${ruleResult.riskLevel.label}")
+        // SAFE는 서버 호출 생략 (Gemini 한도 절약)
+        if (ruleResult.riskLevel == RiskLevel.SAFE) {
+            Log.d(TAG, "규칙 SAFE → 서버 호출 생략")
             return ruleResult
         }
 
-        // 2단계: SAFE 또는 CAUTION → 서버(Gemini)로 정밀 분석
-        Log.d(TAG, "규칙 미탐/주의 → 서버 재검토 (현재: ${ruleResult.riskLevel.label})")
+        // 2단계: CAUTION / DANGER / CRITICAL → 서버(Gemini) 정밀 분석
+        // 규칙이 탐지했어도 Gemini 이유 설명 + 더 정확한 점수 제공
+        Log.d(TAG, "서버 재검토 시작 (규칙: ${ruleResult.riskLevel.label})")
         return try {
             val serverResult = ServerRiskEngine.analyze(input)
-            if (serverResult != null && serverResult.riskLevel.ordinal > ruleResult.riskLevel.ordinal) {
-                Log.i(TAG, "서버 탐지: ${serverResult.riskLevel.label} / score=${serverResult.totalScore}")
-                serverResult
+            if (serverResult != null) {
+                // 서버 결과의 위험도가 같거나 높으면 서버 결과 사용 (Gemini 이유 포함)
+                // 서버가 더 낮게 판단해도 규칙 점수 이상으로 보정
+                val finalScore = maxOf(serverResult.totalScore, ruleResult.totalScore)
+                val finalLevel = if (serverResult.riskLevel.ordinal >= ruleResult.riskLevel.ordinal)
+                    serverResult.riskLevel else ruleResult.riskLevel
+                Log.i(TAG, "Gemini 분석 완료: ${serverResult.riskLevel.label} / score=${serverResult.totalScore}")
+                serverResult.copy(totalScore = finalScore, riskLevel = finalLevel)
             } else {
                 ruleResult
             }

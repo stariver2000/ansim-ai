@@ -166,13 +166,13 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 isFinancialLoading = true
             )
 
-            // 1-2단계: 규칙이 SAFE → LLM 재검토 (IO 스레드 — ANR 방지)
-            val riskResult = if (ruleResult.riskLevel == RiskLevel.SAFE &&
-                                 _uiState.value.llmStatus == LlmStatus.READY) {
-                val llmResult = withContext(Dispatchers.IO) { hybridEngine.analyze(input) }
-                if (llmResult.riskLevel != RiskLevel.SAFE) {
-                    _uiState.value = _uiState.value.copy(currentResult = llmResult)
-                    llmResult
+            // 1-2단계: CAUTION 이상이면 서버(Gemini) 재검토 (IO 스레드 — ANR 방지)
+            // SAFE는 서버 호출 생략 (API 한도 절약)
+            val riskResult = if (ruleResult.riskLevel != RiskLevel.SAFE) {
+                val serverResult = withContext(Dispatchers.IO) { hybridEngine.analyze(input) }
+                if (serverResult.riskLevel != RiskLevel.SAFE) {
+                    _uiState.value = _uiState.value.copy(currentResult = serverResult)
+                    serverResult
                 } else ruleResult
             } else ruleResult
 
