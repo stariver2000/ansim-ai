@@ -13,9 +13,7 @@ import java.util.concurrent.TimeUnit
 
 private const val TAG = "PhishingApiClient"
 
-// 테스트: localhost (adb reverse 사용)
-// 배포 후: Railway URL로 교체
-const val SERVER_URL = "http://localhost:8001"
+const val SERVER_URL = "https://ansim-ai-production.up.railway.app"
 
 data class AnalyzeRequest(
     val message: String,
