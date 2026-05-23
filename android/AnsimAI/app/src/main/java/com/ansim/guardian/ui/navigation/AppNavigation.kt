@@ -3,10 +3,7 @@ package com.ansim.guardian.ui.navigation
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -15,7 +12,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.ansim.guardian.ui.alertlog.AlertLogScreen
-import com.ansim.guardian.ui.financial.FinancialRiskScreen
 import com.ansim.guardian.ui.guardian.GuardianSetupScreen
 import com.ansim.guardian.ui.home.HomeScreen
 import com.ansim.guardian.ui.risk.RiskResultScreen
@@ -24,7 +20,6 @@ import com.ansim.guardian.ui.setup.PermissionSetupScreen
 sealed class Screen(val route: String) {
     object Home : Screen("home")
     object RiskResult : Screen("risk_result")
-    object FinancialRisk : Screen("financial_risk")
     object GuardianSetup : Screen("guardian_setup")
     object PermissionSetup : Screen("permission_setup")
     object AlertLog : Screen("alert_log")
@@ -43,7 +38,6 @@ fun AppNavigation(
         startDestination = Screen.Home.route,
         modifier = modifier
     ) {
-
         composable(Screen.Home.route) {
             HomeScreen(
                 onAnalyze = { text ->
@@ -64,26 +58,13 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.AlertLog.route) {
-            AlertLogScreen(
-                logs = uiState.alertLogs,
-                onDeleteLog = { viewModel.deleteAlertLog(it) },
-                onClearAll = { viewModel.clearAllAlertLogs() },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
         composable(Screen.RiskResult.route) {
             val result = uiState.currentResult
             if (result != null) {
                 RiskResultScreen(
                     riskResult = result,
-                    explanation = uiState.explanation,
-                    isExplanationLoading = uiState.isExplanationLoading,
-                    hasFinancialResults = uiState.financialResults.isNotEmpty(),
-                    isFinancialLoading = uiState.isFinancialLoading,
+                    isAnalyzing = uiState.isExplanationLoading,
                     onCallGuardian = { viewModel.notifyGuardian() },
-                    onViewFinancial = { navController.navigate(Screen.FinancialRisk.route) },
                     onBack = {
                         viewModel.reset()
                         navController.popBackStack()
@@ -92,9 +73,11 @@ fun AppNavigation(
             }
         }
 
-        composable(Screen.FinancialRisk.route) {
-            FinancialRiskScreen(
-                financialResults = uiState.financialResults,
+        composable(Screen.AlertLog.route) {
+            AlertLogScreen(
+                logs = uiState.alertLogs,
+                onDeleteLog = { viewModel.deleteAlertLog(it) },
+                onClearAll = { viewModel.clearAllAlertLogs() },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -113,13 +96,9 @@ fun AppNavigation(
 
         composable(Screen.PermissionSetup.route) {
             val lifecycleOwner = LocalLifecycleOwner.current
-
-            // 설정 다녀온 후 화면 복귀 시 권한 상태 자동 갱신
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME) {
-                        viewModel.checkPermissions()
-                    }
+                    if (event == Lifecycle.Event.ON_RESUME) viewModel.checkPermissions()
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
