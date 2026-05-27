@@ -49,12 +49,14 @@ fun AppNavigation(
                 onOpenAlertLog = { navController.navigate(Screen.AlertLog.route) },
                 onSimulateNotification = { viewModel.simulateNotification(it) },
                 onToggleMonitoring = { viewModel.toggleMonitoring() },
+                onStartAgent = { viewModel.startAgentSession() },
                 isLoading = uiState.isAnalyzing,
                 guardianName = uiState.guardianName,
                 isGuardianConfigured = uiState.guardianPhone.isNotBlank(),
                 isMonitoringEnabled = uiState.isMonitoringEnabled,
                 alertLogCount = uiState.alertLogs.size,
-                llmStatus = uiState.llmStatus
+                llmStatus = uiState.llmStatus,
+                isAgentBusy = uiState.isAgentBusy,
             )
         }
 
@@ -108,6 +110,10 @@ fun AppNavigation(
                 ActivityResultContracts.RequestPermission()
             ) { viewModel.checkPermissions() }
 
+            val micLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { viewModel.checkPermissions() }
+
             PermissionSetupScreen(
                 onComplete = {
                     viewModel.checkPermissions()
@@ -116,9 +122,13 @@ fun AppNavigation(
                 onRequestSmsPermission = {
                     smsLauncher.launch(Manifest.permission.RECEIVE_SMS)
                 },
+                onRequestMicPermission = {
+                    micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                },
                 hasNotificationPermission = uiState.hasNotificationPermission,
                 hasSmsPermission = uiState.hasSmsPermission,
-                hasOverlayPermission = uiState.hasOverlayPermission
+                hasOverlayPermission = uiState.hasOverlayPermission,
+                hasMicPermission = uiState.hasMicPermission,
             )
         }
     }
