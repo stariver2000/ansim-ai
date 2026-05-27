@@ -13,6 +13,11 @@
     <!-- ── [별돌봄 Phase 1] STT 마이크 ── -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- ── [별돌봄 Phase 3] call_contact 도구 — 연락처 이름·전화 조회 ── -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- 전화 직접 걸기. ACTION_DIAL은 권한 불필요하지만 ACTION_CALL은 필요. -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+
     <!-- ── [별돌봄 Phase 1+] 백그라운드 STT 가동 시 (Phase 10 Wake Word 이후 필요) ── -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />

@@ -1,6 +1,12 @@
 package com.ansim.guardian.agent
 
 import android.content.Context
+import com.ansim.guardian.agent.action.ActionRunnerImpl
+import com.ansim.guardian.agent.action.ContactMatcher
+import com.ansim.guardian.agent.action.L1Intent
+import com.ansim.guardian.agent.action.L2Shortcut
+import com.ansim.guardian.agent.action.L4Guide
+import com.ansim.guardian.agent.action.ScamCheckTool
 import com.ansim.guardian.agent.nlu.LlmIntentRouter
 import com.ansim.guardian.agent.nlu.StubLlmEngine
 import com.ansim.guardian.agent.nlu.ToolCatalog
@@ -9,36 +15,74 @@ import com.ansim.guardian.agent.stt.ModelDownloader
 import com.ansim.guardian.agent.stt.SherpaOnnxRecognizer
 import com.ansim.guardian.agent.tts.AndroidTts
 import com.ansim.guardian.agent.tts.TtsCopyProvider
+import com.ansim.guardian.domain.engine.RiskEngine
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * AgentSession + 모든 의존성을 한 번에 만드는 간단 DI 팩토리.
  * Hilt/Koin 도입 전까지 임시.
  *
  * 사용:
- *   val factory = AgentSessionFactory(applicationContext)
+ *   val factory = AgentSessionFactory(applicationContext, hybridRiskEngine)
  *   val session = factory.build()
  *   session.initializeAll().getOrThrow()
  *   val result = session.handleOneTurn()
  */
-class AgentSessionFactory(private val context: Context) {
+class AgentSessionFactory(
+    private val context: Context,
+    private val riskEngine: RiskEngine,
+) {
 
     fun build(): AgentSession {
+        // STT
         val modelDownloader = ModelDownloader(context)
         val audioSource = AudioCaptureSource()
         val stt = SherpaOnnxRecognizer(modelDownloader.modelDir(), audioSource)
 
+        // NLU
         val llm = StubLlmEngine(context)
         val toolCatalog = ToolCatalog.load(context)
         val nlu = LlmIntentRouter(context, llm, toolCatalog)
 
+        // TTS
         val ttsCopy = TtsCopyProvider.load(context)
         val tts = AndroidTts(context, speechRate = ttsCopy.speechRate(), pitch = ttsCopy.pitch())
 
-        return AgentSession(stt = stt, nlu = nlu, tts = tts, ttsCopy = ttsCopy)
+        // Action (Phase 3)
+        val contactMatcher = ContactMatcher(context)
+        val l1 = L1Intent(context, contactMatcher)
+        val l2 = L2Shortcut(context)
+        val l4 = L4Guide()
+        val scamCheck = ScamCheckTool(riskEngine)
+        val (downgradeKeywords, downgradeTaskMap) = loadSafetyStripConfig()
+        val actionRunner = ActionRunnerImpl(
+            context, toolCatalog, contactMatcher,
+            l1, l2, l4, scamCheck,
+            downgradeKeywords, downgradeTaskMap,
+        )
+
+        return AgentSession(
+            stt = stt, nlu = nlu, tts = tts, ttsCopy = ttsCopy,
+            toolCatalog = toolCatalog, action = actionRunner,
+        )
     }
 
-    /**
-     * 모델 다운로드까지 포함한 헬퍼. 호출자가 진행률을 표시할 수 있게 Flow 반환.
-     */
+    /** 모델 다운로드 (UI에서 진행률 표시) */
     fun modelDownloader(): ModelDownloader = ModelDownloader(context)
+
+    private fun loadSafetyStripConfig(): Pair<List<String>, Map<String, String>> {
+        val consts = JSONObject(
+            context.assets.open("agent/agent_constants.json")
+                .bufferedReader().use { it.readText() }
+        )
+        val ss = consts.getJSONObject("safety_strip")
+        val kw: JSONArray = ss.getJSONArray("downgrade_keywords")
+        val keywords = (0 until kw.length()).map { kw.getString(it) }
+        val mapObj = ss.getJSONObject("downgrade_task_map")
+        val taskMap = buildMap<String, String> {
+            mapObj.keys().forEach { k -> put(k, mapObj.getString(k)) }
+        }
+        return keywords to taskMap
+    }
 }

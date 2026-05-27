@@ -1,12 +1,14 @@
 package com.ansim.guardian.agent
 
 import android.util.Log
+import com.ansim.guardian.agent.action.ActionResult
 import com.ansim.guardian.agent.action.ActionRunner
 import com.ansim.guardian.agent.clarify.DialogueState
 import com.ansim.guardian.agent.escalate.NasPlanner
 import com.ansim.guardian.agent.nlu.AgentContext
 import com.ansim.guardian.agent.nlu.IntentRouter
 import com.ansim.guardian.agent.nlu.ToolCall
+import com.ansim.guardian.agent.nlu.ToolCatalog
 import com.ansim.guardian.agent.stt.SpeechRecognizer
 import com.ansim.guardian.agent.stt.SttResult
 import com.ansim.guardian.agent.tts.TextToSpeak
@@ -35,7 +37,8 @@ class AgentSession(
     private val nlu: IntentRouter,
     private val tts: TextToSpeak,
     private val ttsCopy: TtsCopyProvider,
-    @Suppress("unused") private val action: ActionRunner? = null,  // Phase 3에서 not-null
+    private val toolCatalog: ToolCatalog,
+    private val action: ActionRunner,
     @Suppress("unused") private val nasPlanner: NasPlanner? = null,  // Phase 7+
     private val silenceTimeoutMs: Long = 7000,
     private val confirmTimeoutMs: Long = 3000,
@@ -77,14 +80,17 @@ class AgentSession(
             ))
         }
 
-        // 5) 위험 도구는 자동 confirm (Phase 3 ActionRunner 들어가기 전 임시)
-        // Phase 3에서 ActionRunner의 needs_confirm 정책으로 일원화 예정.
-        val needsConfirm = call.tool in CONFIRM_REQUIRED_TOOLS
-        if (needsConfirm) {
-            val confirmKey = "confirm.${call.tool}"
-            val confirmText = ttsCopy.get(confirmKey)
-            tts.speak(if (confirmText.startsWith("(카피 없음")) "${call.tool} 진행할까요?" else confirmText)
-
+        // 5) 도구 정의 조회 + needs_confirm 확인 (ToolCatalog 일원화)
+        val definition = toolCatalog.get(call.tool)
+        if (definition == null) {
+            tts.speak("그건 아직 못 도와드려요.")
+            return TurnResult.Failed("unknown_tool", call.tool)
+        }
+        if (definition.needsConfirm) {
+            val confirmText = ttsCopy.get("confirm.${call.tool}").let { copy ->
+                if (copy.startsWith("(카피 없음")) "${call.tool} 진행할까요?" else copy
+            }
+            tts.speak(confirmText)
             val yes = waitYesNo()
             if (!yes) {
                 tts.speak(ttsCopy.get("clarify.c5_cancel"))
@@ -92,10 +98,27 @@ class AgentSession(
             }
         }
 
-        // 6) 실행 — Phase 3 ActionRunner 통합 전 임시 보고 (PoC)
-        val message = "${call.tool} 도구를 호출했어요."
-        tts.speak(message)
-        return TurnResult.Executed(call, message)
+        // 6) ActionRunner 실 실행 (Phase 3)
+        val actionResult = action.run(call, definition)
+        val ttsMessage = when (actionResult) {
+            is ActionResult.Success -> actionResult.message.let { msg ->
+                // result.* 카피 키면 사전 치환
+                if (msg.startsWith("result_") || msg.startsWith("session.")) ttsCopy.get(msg) else msg
+            }
+            is ActionResult.Failed -> ttsCopy.get(actionResult.message).let { c ->
+                if (c.startsWith("(카피 없음")) actionResult.message else c
+            }
+            is ActionResult.Canceled -> ttsCopy.get("clarify.c5_cancel")
+            is ActionResult.Escalated -> "큰애한테 연결해드릴게요." // Phase 11에서 정식화
+        }
+        tts.speak(ttsMessage)
+
+        return when (actionResult) {
+            is ActionResult.Success -> TurnResult.Executed(call, ttsMessage)
+            is ActionResult.Failed -> TurnResult.Failed(actionResult.errorCode, ttsMessage)
+            is ActionResult.Canceled -> TurnResult.Canceled(actionResult.reason)
+            is ActionResult.Escalated -> TurnResult.Executed(call, ttsMessage)
+        }
     }
 
     private suspend fun waitYesNo(): Boolean {
@@ -117,13 +140,6 @@ class AgentSession(
         // agent_constants.json dialogue.yes_pattern / no_pattern
         private val YES_PATTERN = Regex("(응|네|예|맞아|그래|좋아|맞아요)")
         private val NO_PATTERN = Regex("(아니|아니야|아니에요|취소|그만|싫어)")
-        // 임시 — Phase 3에서 ToolDefinition.needsConfirm로 교체
-        private val CONFIRM_REQUIRED_TOOLS = setOf(
-            "call_contact", "send_sms_contact", "video_call_family",
-            "call_emergency", "map_navigate", "medication_log_add",
-            "app_open", "app_guide_start", "call_family_for_help",
-            "notify_family_silent"
-        )
     }
 }
 
