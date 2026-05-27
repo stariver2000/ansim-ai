@@ -1,0 +1,275 @@
+{
+  "version": "v3-1.0",
+  "updated": "2026-05-27",
+  "tools": [
+    {
+      "name": "call_contact",
+      "description": "연락처의 사람에게 전화를 건다",
+      "level": "L1",
+      "needs_confirm": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "person_ref": {"type": "string"}
+        },
+        "required": ["person_ref"]
+      }
+    },
+    {
+      "name": "send_sms_contact",
+      "description": "연락처의 사람에게 문자를 보낸다 (가이드만)",
+      "level": "L4",
+      "needs_confirm": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "person_ref": {"type": "string"},
+          "message": {"type": "string"}
+        },
+        "required": ["person_ref", "message"]
+      }
+    },
+    {
+      "name": "video_call_family",
+      "description": "가족과 영상통화를 시작한다",
+      "level": "L2",
+      "needs_confirm": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "person_ref": {"type": "string"},
+          "app_preference": {"type": "string", "enum": ["kakao", "facetime", "duo", "any"], "default": "any"}
+        },
+        "required": ["person_ref"]
+      }
+    },
+    {
+      "name": "call_emergency",
+      "description": "긴급 호출 (119/112 또는 가족)",
+      "level": "L1",
+      "needs_confirm": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "kind": {"type": "string", "enum": ["119", "112", "family"]}
+        },
+        "required": ["kind"]
+      }
+    },
+    {
+      "name": "scam_check_text",
+      "description": "받은 문자·메시지가 사기인지 확인한다",
+      "level": "L1",
+      "needs_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "text": {"type": "string"},
+          "sender_hint": {"type": "string"}
+        },
+        "required": ["text"]
+      }
+    },
+    {
+      "name": "scam_check_screen",
+      "description": "지금 화면이 안전한지 확인한다",
+      "level": "L1",
+      "needs_confirm": false,
+      "parameters": {"type": "object", "properties": {}}
+    },
+    {
+      "name": "scam_check_call",
+      "description": "방금 또는 진행 중 통화의 위험성 확인",
+      "level": "L1",
+      "needs_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "scope": {"type": "string", "enum": ["last_call", "current"], "default": "last_call"}
+        }
+      }
+    },
+    {
+      "name": "guide_card_show",
+      "description": "자녀가 만든 가이드 카드를 화면에 띄운다",
+      "level": "L4",
+      "needs_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "card_id": {"type": "string"},
+          "target_app": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "app_guide_start",
+      "description": "특정 앱 사용 단계 가이드 시작 (위험 의도 자동 강등 목적지)",
+      "level": "L4",
+      "needs_confirm": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string",
+            "enum": ["kakao_send_message", "youtube_search", "naver_map_navigate",
+                     "bank_check_balance", "bank_send_money", "photo_send_to_family",
+                     "call_history_view", "toss_otp_input", "coupang_card_register",
+                     "password_change"]
+          }
+        },
+        "required": ["task"]
+      }
+    },
+    {
+      "name": "app_guide_step_next",
+      "description": "진행 중인 가이드의 다음 단계로",
+      "level": "L4",
+      "needs_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "direction": {"type": "string", "enum": ["next", "previous", "repeat", "cancel"]}
+        },
+        "required": ["direction"]
+      }
+    },
+    {
+      "name": "medication_log_check",
+      "description": "오늘/특정 시각에 약을 먹었는지 확인",
+      "level": "L1",
+      "needs_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "when": {"type": "string", "enum": ["today", "morning", "lunch", "evening"]}
+        }
+      }
+    },
+    {
+      "name": "medication_log_add",
+      "description": "방금 약을 먹었다고 기록",
+      "level": "L1",
+      "needs_confirm": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "kind": {"type": "string", "default": "auto"}
+        }
+      }
+    },
+    {
+      "name": "today_summary",
+      "description": "오늘 무엇을 했는지/누구와 통화했는지 요약",
+      "level": "L1",
+      "needs_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "include": {
+            "type": "array",
+            "items": {"type": "string", "enum": ["medication", "calls", "messages", "outings"]}
+          }
+        }
+      }
+    },
+    {
+      "name": "weather_today",
+      "description": "오늘 날씨를 알려준다",
+      "level": "L1",
+      "needs_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {"type": "string", "default": "home"}
+        }
+      }
+    },
+    {
+      "name": "app_open",
+      "description": "지정한 앱을 연다 (화이트리스트만)",
+      "level": "L2",
+      "needs_confirm": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "app_alias": {
+            "type": "string",
+            "enum": ["kakao", "naver_map", "kakao_t", "youtube", "gallery", "camera",
+                     "sms", "phone", "weather", "calendar", "alarm"]
+          }
+        },
+        "required": ["app_alias"]
+      }
+    },
+    {
+      "name": "web_search",
+      "description": "웹에서 검색 (네이버 기본)",
+      "level": "L1",
+      "needs_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {"type": "string"}
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "map_navigate",
+      "description": "특정 장소로 가는 길찾기",
+      "level": "L1",
+      "needs_confirm": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "destination": {"type": "string"},
+          "mode": {"type": "string", "enum": ["walk", "transit", "car"], "default": "transit"}
+        },
+        "required": ["destination"]
+      }
+    },
+    {
+      "name": "call_family_for_help",
+      "description": "자녀에게 도움을 요청한다 (NAS mesh VPN 푸시 + 통화)",
+      "level": "L1",
+      "needs_confirm": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": ["app_stuck", "scam_suspected", "general_help", "feeling_unwell"]
+          },
+          "context_snippet": {"type": "string"}
+        },
+        "required": ["reason"]
+      }
+    },
+    {
+      "name": "notify_family_silent",
+      "description": "자녀에게 조용한 알림 보내기",
+      "level": "L1",
+      "needs_confirm": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "message": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "clarify",
+      "description": "어르신께 모호함을 되묻는다",
+      "level": "L1",
+      "needs_confirm": false,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "candidates": {"type": "array", "items": {"type": "string"}, "maxItems": 3},
+          "question": {"type": "string"}
+        }
+      }
+    }
+  ]
+}

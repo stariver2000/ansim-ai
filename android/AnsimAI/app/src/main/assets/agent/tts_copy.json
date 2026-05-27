@@ -1,0 +1,88 @@
+{
+  "version": "v3-1.0",
+  "tts_params": {
+    "speech_rate": 0.8,
+    "pitch": 0.95,
+    "locale": "ko-KR"
+  },
+  "confirm": {
+    "call_contact": "{호칭} {풀네임}에게 전화 거는 거 맞으세요?",
+    "send_sms_contact": "{호칭}에게 '{message_preview}'라고 문자 보내드릴까요? 보내실 때는 직접 '보내기'를 눌러주세요.",
+    "video_call_family": "{호칭}에게 영상통화 걸어드릴게요. 맞으세요?",
+    "call_emergency_119": "119에 전화 걸어드릴게요. 정말 응급 상황이신가요?",
+    "call_emergency_112": "112 경찰에 전화 걸어드릴게요. 맞으세요?",
+    "call_emergency_family": "{호칭}에게 긴급으로 도움 요청 보낼게요. 맞으세요?",
+    "app_open": "{앱 이름} 열어드릴게요.",
+    "map_navigate": "{destination}까지 {모드} 길찾기 시작할게요. 맞으세요?",
+    "medication_log_add": "방금 약 드신 걸로 기록할게요. 맞으세요?",
+    "app_guide_start_bank_send_money": "송금은 어르신이 직접 눌러주셔야 안전해요. 제가 옆에서 어디를 누르실지 알려드릴게요. 시작할까요?",
+    "app_guide_start_otp": "OTP 비밀번호는 어르신만 입력하셔야 해요. 제가 어디에 넣을지만 알려드릴게요.",
+    "app_guide_start_default": "{앱 이름}에서 {작업} 도와드릴게요. 시작할까요?",
+    "call_family_for_help_app_stuck": "{호칭}에게 '{context_snippet}'라고 알려드릴게요. 맞으세요?",
+    "call_family_for_help_scam": "{호칭}에게 수상한 문자 받으셨다고 알려드릴게요. 맞으세요?",
+    "call_family_for_help_unwell": "{호칭}에게 몸이 안 좋다고 연락드릴게요. 맞으세요?",
+    "notify_family_silent": "{호칭}에게 조용히 알려드릴게요."
+  },
+  "result_success": {
+    "send_sms_contact": "문자 화면 띄웠어요. 내용 확인하시고 '보내기' 눌러주세요.",
+    "video_call_family": "영상통화 시작해요.",
+    "medication_log_check_found": "오늘 약은 {time}에 드신 기록이 있어요.",
+    "medication_log_check_empty": "오늘은 약 드신 기록이 없어요. 지금 드시겠어요?",
+    "medication_log_add": "방금 약 드신 걸로 기록했어요.",
+    "today_summary_empty": "오늘은 아직 기록이 별로 없어요.",
+    "weather_today": "오늘 {location}은 {desc}예요.",
+    "map_navigate": "{destination}까지 가는 길 보여드릴게요. 잘 다녀오세요."
+  },
+  "result_scam": {
+    "safe": "이 메시지는 안전해 보여요. 그래도 모르는 곳에서 온 거면 조심하세요.",
+    "caution": "이 메시지는 조심하셔야 해요. {reason}. 답장하기 전에 한 번 더 생각해 보세요.",
+    "danger": "이 메시지는 위험해요. {reason}. 답장이나 링크를 누르지 마세요.",
+    "critical": "이 메시지는 사기예요. {reason}. 절대로 답장이나 송금하지 마세요. {큰애}에게 보여드릴까요?"
+  },
+  "result_fail": {
+    "contact_not_found": "{호칭}이 연락처에 없네요. 사진으로 누구신지 알려주시겠어요?",
+    "call_failed": "전화가 안 걸려요. 잠시 후 다시 해보세요.",
+    "app_not_installed": "그 앱이 없어요. 큰애한테 깔아달라고 부탁하시면 돼요.",
+    "nas_offline": "지금 별서버에 연결이 안 돼요. 다른 일은 도와드릴 수 있어요.",
+    "llm_timeout": "잠시만요... 생각 중이에요.",
+    "scam_check_uncertain": "이 메시지는 제가 확실히 모르겠어요. {큰애}에게 보여드릴까요?",
+    "generic": "지금은 안 되네요. 잠시 후 다시 부탁드려요."
+  },
+  "clarify": {
+    "c1_confirm_first": "{도구 confirm} 맞으면 '네', 아니면 '아니에요'라고 말씀해 주세요.",
+    "c2_person_candidate_first": "{호칭1} {풀네임1} 말씀하시는 건가요?",
+    "c2_person_candidate_next": "그럼 {호칭2} {풀네임2}인가요?",
+    "c2_visual_fallback": "{호칭} 두 분 중에 누구신지 모르겠어요. 사진으로 보여드릴게요.",
+    "c3_unknown_first": "무엇을 도와드릴까요? {후보1}, {후보2}, {후보3} 중에 골라보세요.",
+    "c3_unknown_second": "잘 이해가 안 돼요. 더 자세히 말씀해 주시겠어요?",
+    "c3_encyclopedia": "이건 제가 잘 모르겠어요. 검색해드릴까요, 아니면 {큰애}에게 물어볼까요?",
+    "c3_session_end": "괜찮아요. 필요하시면 다시 '별돌봄아' 하고 부르세요.",
+    "c4_stt_low_1": "잘 못 들었어요. 다시 한 번 말씀해 주세요.",
+    "c4_stt_low_2": "마이크에 가까이 대고 천천히 말씀해 주세요.",
+    "c4_stt_low_3": "오늘은 안 되는 것 같아요. 잠시 후 다시 부르세요.",
+    "c5_cancel": "네, 멈췄어요."
+  },
+  "session": {
+    "wake_detected": "네, 듣고 있어요.",
+    "silence_5s": "지금은 안 부르신 것 같아요. 필요하시면 다시 부르세요.",
+    "help": "전화 걸기, 문자 보내기, 사기 확인, 약 기록, 길찾기 같은 걸 도와드려요. 그냥 자연스럽게 말씀해 주세요."
+  },
+  "permission": {
+    "mic_pre": "어르신 목소리를 듣고 도와드리려면 마이크를 허용해야 해요.",
+    "mic_dialog_hint": "다음 화면에서 '허용'을 눌러주세요.",
+    "mic_denied": "마이크 없이는 음성으로 부르실 수 없어요. 화면 마이크 버튼은 그래도 쓰실 수 있어요.",
+    "notif_pre": "수상한 카카오톡이나 문자가 오면 막아드릴게요. 알림 읽기를 허용해야 해요.",
+    "notif_dialog_hint": "다음 화면에서 '별돌봄' 옆 스위치를 켜주세요.",
+    "notif_denied": "알림 못 읽으면 미리 막아드릴 수 없어요. 의심스러우면 '이 문자 안전해?' 하고 물어봐 주세요.",
+    "overlay_pre": "사기 의심 문자가 오면 화면 위에 큰 경고를 띄워드릴게요. 다음 화면에서 '허용' 눌러주세요.",
+    "accessibility_pre": "어디서 막히셨는지 알고 도와드리려면 '접근성 서비스'를 켜주셔야 해요. {큰애}이 도와드릴 수 있도록 하는 거예요. 절대 어르신 비밀번호는 안 봐요.",
+    "external_llm_dialog": "이 토글을 켜시면 의심 문자의 일부가 인터넷을 통해 Google 회사의 AI에 전달돼요. 이름·전화번호·계좌번호는 가린 뒤 보내드려요. 사기 확인 한 가지 용도만 써요."
+  },
+  "family_push": {
+    "app_stuck": "어머니가 {앱}에서 막히셨다고 알려주셨어요. 같이 봐드릴까요?",
+    "scam_suspected": "어머니께 수상한 메시지가 왔어요. 같이 확인해 주세요.",
+    "feeling_unwell": "⚠️ 어머니가 몸이 안 좋다고 하셨어요. 지금 통화해 주세요.",
+    "general_help": "어머니가 도움을 요청하셨어요.",
+    "silent_notice": "어머니: {message}"
+  }
+}

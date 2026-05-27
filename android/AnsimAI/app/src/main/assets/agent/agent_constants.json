@@ -1,0 +1,53 @@
+{
+  "version": "v3-1.0",
+  "dialogue": {
+    "silence_timeout_confirm_ms": 3000,
+    "silence_timeout_clarify_ms": 5000,
+    "silence_timeout_session_ms": 7000,
+    "yes_pattern": "(응|네|예|맞아|그래|좋아|맞아요|네 맞아요)",
+    "no_pattern": "(아니|아니야|아니에요|취소|그만|싫어|싫어요)",
+    "cancel_pattern": "(취소|그만|잠깐|멈춰|스톱|안 해|안할래|됐어|이제 그만|관둘게)",
+    "max_clarify_turns": 3
+  },
+  "safety_strip": {
+    "downgrade_keywords": [
+      "송금", "이체", "보내줘", "OTP", "오티피", "인증번호", "본인인증", "본인 인증",
+      "비밀번호", "비번", "결제", "카드 등록", "카드등록", "앱 설치", "앱설치", "APK",
+      "약관", "동의", "가입", "회원가입", "회원 가입", "계좌 등록", "계좌등록"
+    ],
+    "downgrade_task_map": {
+      "송금": "bank_send_money",
+      "이체": "bank_send_money",
+      "OTP": "toss_otp_input",
+      "인증번호": "toss_otp_input",
+      "본인인증": "toss_otp_input",
+      "비밀번호": "password_change",
+      "비번": "password_change",
+      "카드 등록": "coupang_card_register",
+      "결제": "bank_send_money"
+    }
+  },
+  "stt": {
+    "min_confidence": 0.6,
+    "max_retry": 3,
+    "sample_rate": 16000,
+    "language": "ko"
+  },
+  "nlu": {
+    "model_preference": ["gemma3-1b-it-q4", "qwen2.5-1.5b-instruct-q4_k_m"],
+    "max_tokens": 128,
+    "temperature": 0.1,
+    "grammar_file": "assets/agent/byuldolbom-tool-call.gbnf",
+    "few_shot_count": 5,
+    "tool_count_per_session": 10
+  },
+  "nas": {
+    "escalate_timeout_ms": 2000,
+    "default_url_template": "https://{nas_host}/agent/plan"
+  },
+  "external_llm": {
+    "default_enabled": false,
+    "allowed_use_cases": ["scam_check"],
+    "masking_required": true
+  }
+}
