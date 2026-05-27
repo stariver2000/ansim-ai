@@ -3,11 +3,19 @@
 
     <!-- ── MVP 1: 텍스트 분석 ── -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- ── MVP 3: LLM 모델 파일 읽기 (테스트용 /sdcard 접근) ── -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- ── [별돌봄 Phase 1] STT 마이크 ── -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- ── [별돌봄 Phase 1+] 백그라운드 STT 가동 시 (Phase 10 Wake Word 이후 필요) ── -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <!-- ── MVP 2: 알림 모니터링 (NotificationListenerService는 별도 권한 승인 필요) ── -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />

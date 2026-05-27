@@ -30,13 +30,23 @@ data class PermissionItem(
 fun PermissionSetupScreen(
     onComplete: () -> Unit,
     onRequestSmsPermission: () -> Unit = {},
+    onRequestMicPermission: () -> Unit = {},
     hasNotificationPermission: Boolean,
     hasSmsPermission: Boolean,
-    hasOverlayPermission: Boolean
+    hasOverlayPermission: Boolean,
+    hasMicPermission: Boolean = false,
 ) {
     val context = LocalContext.current
 
     val permissions = listOf(
+        // [별돌봄 Phase 1] 음성 에이전트 마이크
+        PermissionItem(
+            title = "마이크 권한 (별돌봄)",
+            description = "어르신 목소리를 듣고 도와드리려면 마이크를 허용해야 해요",
+            emoji = "🎙️",
+            isGranted = hasMicPermission,
+            onRequest = onRequestMicPermission
+        ),
         PermissionItem(
             title = "알림 읽기 권한",
             description = "카카오톡·텔레그램 알림을 분석해서 사기를 탐지해요",

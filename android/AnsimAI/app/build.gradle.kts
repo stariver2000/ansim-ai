@@ -16,6 +16,11 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // [별돌봄 Phase 1] sherpa-onnx native libs (arm64-v8a 필수, armeabi-v7a는 구형 폰)
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     buildFeatures {
@@ -73,6 +78,15 @@ dependencies {
     // JSON + HTTP (Gemini 서버 통신)
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // [별돌봄 Phase 1] sherpa-onnx STT (한국어 Zipformer)
+    // AAR은 GitHub Releases에서 직접 받아 app/libs/sherpa-onnx-1.13.2.aar로 배치
+    //   wget https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.2/sherpa-onnx-1.13.2.aar -O app/libs/sherpa-onnx-1.13.2.aar
+    // (Maven Central 공식 배포 없음. 자세한 안내: README_BYULDOLBOM.md)
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+
+    // [별돌봄 Phase 1] 모델 tar.bz2 해제 (NAS/GitHub Releases에서 다운로드 후)
+    implementation("org.apache.commons:commons-compress:1.26.2")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

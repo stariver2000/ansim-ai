@@ -56,17 +56,52 @@ app/src/main/
 - ✅ `agent/` Kotlin interface + data class 10개
 - ✅ 본 README
 
-## 다음 단계 (Phase 1+)
+## Phase 1 완료 항목 (2026-05-27)
 
-| Phase | 작업 |
-|---|---|
-| 1 | STT — sherpa-onnx Zipformer-ko 통합 |
-| 2 | NLU — Gemma 3 1B + GBNF grammar 강제 |
-| 3 | Action runner — L1 표준 Intent 5개 (call/scam_check/app_open/web_search/today_summary) |
-| 4 | TTS — Android 기본 TTS 0.75× |
-| 5 | Wake — 큰 마이크 버튼 (Porcupine는 Phase 10) |
-| 6 | Clarification — 침묵 = NO + 풀네임 confirm |
-| 7 | NAS escalate stub → Phase 11에서 실제 구현 |
+- ✅ Gradle 의존성: `sherpa-onnx-1.13.2.aar` (libs 드롭인) + `commons-compress:1.26.2`
+- ✅ NDK abiFilters: `arm64-v8a`, `armeabi-v7a`
+- ✅ AndroidManifest: `RECORD_AUDIO`, `FOREGROUND_SERVICE_MICROPHONE`, `ACCESS_NETWORK_STATE`
+- ✅ `agent/stt/SherpaOnnxRecognizer.kt` — `SpeechRecognizer` 실 구현 (한국어 streaming Zipformer, int8)
+- ✅ `agent/stt/AudioCaptureSource.kt` — 16kHz mono PCM Flow (VOICE_RECOGNITION)
+- ✅ `agent/stt/ModelDownloader.kt` — GitHub Releases tar.bz2 → encoder/decoder/joiner/tokens.txt 추출
+- ✅ `proguard-rules.pro` — sherpa-onnx native 메서드 보호
+- ✅ `PermissionSetupScreen` — 마이크 권한 카드 추가
+
+## ⚠️ Phase 1 사용 전 — AAR + 모델 다운로드
+
+**1) sherpa-onnx AAR (약 60MB)** — Maven Central 공식 배포 없음, GitHub Releases에서 직접:
+
+```bash
+cd ~/ansim-ai/android/AnsimAI
+wget -O app/libs/sherpa-onnx-1.13.2.aar \
+  https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.2/sherpa-onnx-1.13.2.aar
+```
+
+**2) STT 모델 (약 200MB tar)** — 앱 첫 실행 시 `ModelDownloader.ensureModel()`이 자동 다운로드.
+수동으로 미리 받으려면:
+
+```bash
+wget https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-korean-2024-06-16.tar.bz2
+# 풀고 int8 파일들만 골라 /data/data/com.ansim.guardian/files/models/stt-ko-zipformer/sherpa-onnx-streaming-zipformer-korean-2024-06-16/ 에 push
+```
+
+**3) 빌드 검증** (Android Studio 또는 명령줄):
+```bash
+./gradlew :app:assembleDebug
+```
+NDK + Kotlin 2.0 + compose-bom 2024.10.00 환경 필요. ABI 필터로 빌드 크기 ↑ 주의.
+
+## 다음 단계 (Phase 2+)
+
+| Phase | 작업 | 상태 |
+|---|---|---|
+| 1 | STT — sherpa-onnx Zipformer-ko 통합 | ✅ 완료 |
+| 2 | NLU — Gemma 3 1B + GBNF grammar 강제 | 대기 |
+| 3 | Action runner — L1 표준 Intent 5개 (call/scam_check/app_open/web_search/today_summary) | 대기 |
+| 4 | TTS — Android 기본 TTS 0.75× | 대기 |
+| 5 | Wake — 큰 마이크 버튼 (Porcupine는 Phase 10) | 대기 |
+| 6 | Clarification — 침묵 = NO + 풀네임 confirm | 대기 |
+| 7 | NAS escalate stub → Phase 11에서 실제 구현 | 대기 |
 
 상세: [docs/codex-design/11-product-elderly/POC_IMPLEMENTATION_PLAN_KO.md](../Byul_NAS/docs/codex-design/11-product-elderly/POC_IMPLEMENTATION_PLAN_KO.md) (별서버 레포)
 
@@ -104,4 +139,4 @@ app/src/main/
 
 ---
 
-🛡️ 별돌봄 v3 — 2026-05-27 설계 완료, Phase 0a 스켈레톤 완료, Phase 1 STT 대기.
+🛡️ 별돌봄 v3 — 2026-05-27 설계 완료, Phase 0a + Phase 1 STT 완료. AAR/모델 드롭인 후 빌드 검증 필요. Phase 2 NLU 대기.
