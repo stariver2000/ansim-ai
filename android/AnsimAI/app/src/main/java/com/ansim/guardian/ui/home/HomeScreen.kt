@@ -25,12 +25,14 @@ fun HomeScreen(
     onOpenAlertLog: () -> Unit = {},
     onSimulateNotification: (String) -> Unit = {},
     onToggleMonitoring: () -> Unit = {},
+    onStartAgent: () -> Unit = {},
     isLoading: Boolean = false,
     guardianName: String = "",
     isGuardianConfigured: Boolean = false,
     isMonitoringEnabled: Boolean = true,
     alertLogCount: Int = 0,
-    llmStatus: LlmStatus = LlmStatus.UNAVAILABLE
+    llmStatus: LlmStatus = LlmStatus.UNAVAILABLE,
+    isAgentBusy: Boolean = false,
 ) {
     var inputText by remember { mutableStateOf("") }
 
@@ -44,6 +46,9 @@ fun HomeScreen(
     ) {
         // 헤더
         HeaderSection()
+
+        // [별돌봄 Phase 5] 음성 에이전트 진입
+        AgentEntryCard(onStart = onStartAgent, isBusy = isAgentBusy)
 
         // 보호자 / 권한 설정 버튼
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -87,6 +92,62 @@ fun HomeScreen(
 
         // 안내 문구
         GuideSection()
+    }
+}
+
+@Composable
+private fun AgentEntryCard(onStart: () -> Unit, isBusy: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "🎙️",
+                fontSize = 56.sp
+            )
+            Text(
+                text = "별돌봄에게 말씀하세요",
+                style = MaterialTheme.typography.titleLarge,
+                color = PrimaryBlue,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "예) \"큰애한테 전화해줘\"\n     \"이 문자 안전해?\"",
+                style = MaterialTheme.typography.bodyLarge,
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
+            Button(
+                onClick = onStart,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(72.dp),
+                enabled = !isBusy,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+            ) {
+                if (isBusy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        color = Color.White,
+                        strokeWidth = 3.dp
+                    )
+                } else {
+                    Text(
+                        text = "🎙️  말씀 시작하기",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
     }
 }
 

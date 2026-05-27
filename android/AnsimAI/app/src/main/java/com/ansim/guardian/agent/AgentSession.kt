@@ -1,38 +1,129 @@
 package com.ansim.guardian.agent
 
+import android.util.Log
 import com.ansim.guardian.agent.action.ActionRunner
 import com.ansim.guardian.agent.clarify.DialogueState
 import com.ansim.guardian.agent.escalate.NasPlanner
+import com.ansim.guardian.agent.nlu.AgentContext
 import com.ansim.guardian.agent.nlu.IntentRouter
 import com.ansim.guardian.agent.nlu.ToolCall
 import com.ansim.guardian.agent.stt.SpeechRecognizer
+import com.ansim.guardian.agent.stt.SttResult
+import com.ansim.guardian.agent.tts.TextToSpeak
 import com.ansim.guardian.agent.tts.TtsCopyProvider
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * 별돌봄 에이전트 세션 오케스트레이션.
+ * 별돌봄 에이전트 세션 오케스트레이션. Phase 5 구현 — 최소 사이클.
  *
- * 5단 파이프라인 진입점:
- *   wake → stt → nlu → action(L1~L4 분기) → tts
+ *   1. TTS "네, 듣고 있어요"
+ *   2. STT 시작 → 첫 final 결과 받음 (silence_timeout_session_ms 이내)
+ *   3. NLU route → ToolCall
+ *   4. (Phase 3에서 ActionRunner 통합 예정) — 현재는 도구 호출 자체를 TTS로 보고
+ *   5. needs_confirm 도구면 confirm TTS + STT 응답 대기 (YES/NO)
+ *   6. 결과 TTS
  *
- * 각 컴포넌트는 interface로 주입받아 Phase별로 구현 교체 가능.
+ * Phase 3 통합 시 ActionRunner.run(toolCall)이 들어가고 결과 메시지를 TTS로.
  *
- * 자세한 설계: docs/codex-design/11-product-elderly/BYULDOLBOM_V3_DESIGN_KO.md
+ * 자세한 설계:
+ *  - docs/codex-design/11-product-elderly/BYULDOLBOM_V3_DESIGN_KO.md §2
+ *  - docs/codex-design/11-product-elderly/CLARIFICATION_DIALOGUE_KO.md §8 상태머신
  */
 class AgentSession(
     private val stt: SpeechRecognizer,
     private val nlu: IntentRouter,
-    private val action: ActionRunner,
-    private val nasPlanner: NasPlanner,
-    private val ttsCopy: TtsCopyProvider
+    private val tts: TextToSpeak,
+    private val ttsCopy: TtsCopyProvider,
+    @Suppress("unused") private val action: ActionRunner? = null,  // Phase 3에서 not-null
+    @Suppress("unused") private val nasPlanner: NasPlanner? = null,  // Phase 7+
+    private val silenceTimeoutMs: Long = 7000,
+    private val confirmTimeoutMs: Long = 3000,
 ) {
-    /**
-     * 한 라운드의 어르신 요청 처리.
-     * 호출: 마이크 버튼(Phase 5)이나 Wake Word(Phase 10)로 시작.
-     *
-     * Phase 0 PoC: 구현 미정. Phase 1~7에서 채움.
-     */
-    suspend fun handleOneTurn(): TurnResult {
-        TODO("Phase 1~7에서 구현")
+    /** 컴포넌트 초기화 (모델 로드 등). 무거우므로 앱 시작 시 한 번. */
+    suspend fun initializeAll(): Result<Unit> = runCatching {
+        stt.initialize().getOrThrow()
+        nlu.initialize().getOrThrow()
+        tts.initialize().getOrThrow()
+    }
+
+    /** 한 라운드의 어르신 요청 처리. 마이크 버튼 또는 Wake Word로 진입. */
+    suspend fun handleOneTurn(context: AgentContext = AgentContext()): TurnResult {
+        // 1) 시작 안내
+        tts.speak(ttsCopy.get("session.wake_detected"))
+
+        // 2) STT — 첫 final 결과까지
+        val sttResult = withTimeoutOrNull(silenceTimeoutMs) {
+            stt.startStreaming().first { it.isFinal && it.text.isNotBlank() }
+        }
+        if (sttResult == null) {
+            tts.speak(ttsCopy.get("session.silence_5s"))
+            return TurnResult.Canceled("silence_timeout")
+        }
+        Log.i(TAG, "STT: '${sttResult.text}' (conf=${sttResult.confidence})")
+
+        // 3) NLU
+        val call = nlu.route(sttResult.text, context)
+        Log.i(TAG, "NLU: ${call.tool} ${call.args}")
+
+        // 4) clarify면 질문 TTS 후 종료 (다음 turn에서 사용자가 다시 부름)
+        if (call.tool == "clarify") {
+            val q = call.argString("question") ?: ttsCopy.get("clarify.c3_unknown_first")
+            tts.speak(q)
+            return TurnResult.Clarified(DialogueState.Clarifying(
+                kind = com.ansim.guardian.agent.clarify.ClarifyKind.C3_UNKNOWN,
+                candidates = (call.args["candidates"] as? List<*>)?.map { it.toString() } ?: emptyList(),
+                turn = 1
+            ))
+        }
+
+        // 5) 위험 도구는 자동 confirm (Phase 3 ActionRunner 들어가기 전 임시)
+        // Phase 3에서 ActionRunner의 needs_confirm 정책으로 일원화 예정.
+        val needsConfirm = call.tool in CONFIRM_REQUIRED_TOOLS
+        if (needsConfirm) {
+            val confirmKey = "confirm.${call.tool}"
+            val confirmText = ttsCopy.get(confirmKey)
+            tts.speak(if (confirmText.startsWith("(카피 없음")) "${call.tool} 진행할까요?" else confirmText)
+
+            val yes = waitYesNo()
+            if (!yes) {
+                tts.speak(ttsCopy.get("clarify.c5_cancel"))
+                return TurnResult.Canceled("user_no")
+            }
+        }
+
+        // 6) 실행 — Phase 3 ActionRunner 통합 전 임시 보고 (PoC)
+        val message = "${call.tool} 도구를 호출했어요."
+        tts.speak(message)
+        return TurnResult.Executed(call, message)
+    }
+
+    private suspend fun waitYesNo(): Boolean {
+        val response = withTimeoutOrNull(confirmTimeoutMs) {
+            stt.startStreaming().first { it.isFinal && it.text.isNotBlank() }
+        }
+        val text = response?.text ?: return false  // 침묵 = NO
+        return YES_PATTERN.containsMatchIn(text) && !NO_PATTERN.containsMatchIn(text)
+    }
+
+    fun release() {
+        stt.release()
+        nlu.release()
+        tts.release()
+    }
+
+    companion object {
+        private const val TAG = "AgentSession"
+        // agent_constants.json dialogue.yes_pattern / no_pattern
+        private val YES_PATTERN = Regex("(응|네|예|맞아|그래|좋아|맞아요)")
+        private val NO_PATTERN = Regex("(아니|아니야|아니에요|취소|그만|싫어)")
+        // 임시 — Phase 3에서 ToolDefinition.needsConfirm로 교체
+        private val CONFIRM_REQUIRED_TOOLS = setOf(
+            "call_contact", "send_sms_contact", "video_call_family",
+            "call_emergency", "map_navigate", "medication_log_add",
+            "app_open", "app_guide_start", "call_family_for_help",
+            "notify_family_silent"
+        )
     }
 }
 
