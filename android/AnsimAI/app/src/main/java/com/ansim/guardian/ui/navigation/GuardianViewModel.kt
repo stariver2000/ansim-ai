@@ -31,6 +31,7 @@ data class GuardianUiState(
     val hasNotificationPermission: Boolean = false,
     val hasSmsPermission: Boolean = false,
     val hasOverlayPermission: Boolean = false,
+    val hasMicPermission: Boolean = false,
     // 보호자 설정
     val guardianName: String = "",
     val guardianPhone: String = "",
@@ -41,7 +42,10 @@ data class GuardianUiState(
     // 위험 기록
     val alertLogs: List<AlertLogEntity> = emptyList(),
     // 서버 AI 상태
-    val llmStatus: LlmStatus = LlmStatus.READY
+    val llmStatus: LlmStatus = LlmStatus.READY,
+    // [별돌봄 Phase 5] 음성 에이전트 상태
+    val isAgentBusy: Boolean = false,
+    val lastAgentMessage: String = "",
 )
 
 class GuardianViewModel(application: Application) : AndroidViewModel(application) {
@@ -101,8 +105,66 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 app, android.Manifest.permission.RECEIVE_SMS
             ) == PackageManager.PERMISSION_GRANTED,
             hasNotificationPermission = androidx.core.app.NotificationManagerCompat
-                .getEnabledListenerPackages(app).contains(app.packageName)
+                .getEnabledListenerPackages(app).contains(app.packageName),
+            hasMicPermission = ContextCompat.checkSelfPermission(
+                app, android.Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
         )
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // [별돌봄 Phase 5] 음성 에이전트 한 라운드 실행
+    // ───────────────────────────────────────────────────────────
+
+    private var agentInitialized = false
+
+    fun startAgentSession() {
+        val app = getApplication<Application>()
+        if (ContextCompat.checkSelfPermission(
+                app, android.Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            _uiState.value = _uiState.value.copy(
+                lastAgentMessage = "마이크 권한을 먼저 허용해 주세요."
+            )
+            return
+        }
+        if (_uiState.value.isAgentBusy) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isAgentBusy = true, lastAgentMessage = "")
+            try {
+                val session = AnsimApplication.instance.agentSession
+                if (!agentInitialized) {
+                    val r = session.initializeAll()
+                    if (r.isFailure) {
+                        _uiState.value = _uiState.value.copy(
+                            lastAgentMessage = "준비가 안 됐어요: ${r.exceptionOrNull()?.message ?: "알 수 없음"}",
+                            isAgentBusy = false,
+                        )
+                        return@launch
+                    }
+                    agentInitialized = true
+                }
+                val result = session.handleOneTurn()
+                _uiState.value = _uiState.value.copy(
+                    lastAgentMessage = result.toShortString(),
+                    isAgentBusy = false,
+                )
+            } catch (t: Throwable) {
+                _uiState.value = _uiState.value.copy(
+                    lastAgentMessage = "문제가 생겼어요: ${t.message ?: t.javaClass.simpleName}",
+                    isAgentBusy = false,
+                )
+            }
+        }
+    }
+
+    private fun com.ansim.guardian.agent.TurnResult.toShortString(): String = when (this) {
+        is com.ansim.guardian.agent.TurnResult.Executed -> message
+        is com.ansim.guardian.agent.TurnResult.Clarified -> "다시 한 번 말씀해 주세요."
+        is com.ansim.guardian.agent.TurnResult.Canceled -> "취소했어요."
+        is com.ansim.guardian.agent.TurnResult.Failed -> message
     }
 
     fun toggleMonitoring() {
