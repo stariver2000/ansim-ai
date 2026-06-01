@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import com.ansim.guardian.ui.alertlog.AlertLogScreen
 import com.ansim.guardian.ui.guardian.GuardianSetupScreen
 import com.ansim.guardian.ui.home.HomeScreen
+import com.ansim.guardian.ui.nas.NasConnectScreen
 import com.ansim.guardian.ui.risk.RiskResultScreen
 import com.ansim.guardian.ui.setup.PermissionSetupScreen
 
@@ -23,6 +24,7 @@ sealed class Screen(val route: String) {
     object GuardianSetup : Screen("guardian_setup")
     object PermissionSetup : Screen("permission_setup")
     object AlertLog : Screen("alert_log")
+    object NasConnect : Screen("nas_connect")
 }
 
 @Composable
@@ -47,6 +49,10 @@ fun AppNavigation(
                 onOpenGuardianSetup = { navController.navigate(Screen.GuardianSetup.route) },
                 onOpenPermissionSetup = { navController.navigate(Screen.PermissionSetup.route) },
                 onOpenAlertLog = { navController.navigate(Screen.AlertLog.route) },
+                onOpenNasConnect = {
+                    viewModel.refreshNasPairing()
+                    navController.navigate(Screen.NasConnect.route)
+                },
                 onSimulateNotification = { viewModel.simulateNotification(it) },
                 onToggleMonitoring = { viewModel.toggleMonitoring() },
                 onStartAgent = { viewModel.startAgentSession() },
@@ -73,6 +79,22 @@ fun AppNavigation(
                     }
                 )
             }
+        }
+
+        composable(Screen.NasConnect.route) {
+            NasConnectScreen(
+                isPaired = uiState.isNasPaired,
+                baseUrl = uiState.nasBaseUrl,
+                tokenExpEpochMs = uiState.nasTokenExpEpochMs,
+                message = uiState.nasPairMessage,
+                onPayloadScanned = { viewModel.onNasQrScanned(it) },
+                onUnpair = { viewModel.unpairNas() },
+                onScanError = { viewModel.onNasQrScanned("") },  // 빈 페이로드 → 실패 메시지
+                onBack = {
+                    viewModel.clearNasPairMessage()
+                    navController.popBackStack()
+                },
+            )
         }
 
         composable(Screen.AlertLog.route) {

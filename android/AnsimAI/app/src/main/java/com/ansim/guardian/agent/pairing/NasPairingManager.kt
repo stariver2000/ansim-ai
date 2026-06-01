@@ -33,6 +33,9 @@ class NasPairingManager(context: Context) {
 
     fun isPaired(): Boolean = store.isPaired()
 
+    /** 현재 페어링(표시용 — baseUrl/만료 등). 미페어링이면 null. */
+    fun currentPairing(): NasPairing? = store.load()
+
     /** 페어링 해제. */
     fun unpair() {
         store.clear()

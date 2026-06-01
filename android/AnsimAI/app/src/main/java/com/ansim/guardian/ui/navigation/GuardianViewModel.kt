@@ -46,6 +46,11 @@ data class GuardianUiState(
     // [별돌봄 Phase 5] 음성 에이전트 상태
     val isAgentBusy: Boolean = false,
     val lastAgentMessage: String = "",
+    // [별돌봄 Phase 11] NAS 연결(페어링) 상태
+    val isNasPaired: Boolean = false,
+    val nasBaseUrl: String = "",
+    val nasTokenExpEpochMs: Long = 0L,
+    val nasPairMessage: String = "",
 )
 
 class GuardianViewModel(application: Application) : AndroidViewModel(application) {
@@ -58,6 +63,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     private val ruleEngine = RuleBasedRiskEngine()
     private val hybridEngine = AnsimApplication.instance.hybridEngine
     private val guardianManager = GuardianNotificationManager(application)
+    private val nasPairing = AnsimApplication.instance.nasPairingManager
 
     init {
         // 백그라운드 이벤트 수신
@@ -95,6 +101,46 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             isMonitoringEnabled = MonitoringPrefs.isEnabled(app)
         )
         checkPermissions()
+        refreshNasPairing()
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // [별돌봄 Phase 11] NAS 연결(페어링)
+    // ───────────────────────────────────────────────────────────
+
+    /** 저장된 페어링을 UI 상태로 반영. */
+    fun refreshNasPairing() {
+        val p = nasPairing.currentPairing()
+        _uiState.value = _uiState.value.copy(
+            isNasPaired = p != null,
+            nasBaseUrl = p?.baseUrl ?: "",
+            nasTokenExpEpochMs = p?.tokenExpEpochMs ?: 0L,
+        )
+    }
+
+    /** 페어링 QR에서 읽은 원문 페이로드를 검증·저장. 성공/실패 메시지를 상태로. */
+    fun onNasQrScanned(payload: String) {
+        nasPairing.pair(payload)
+            .onSuccess {
+                _uiState.value = _uiState.value.copy(nasPairMessage = "NAS에 연결됐어요.")
+                refreshNasPairing()
+            }
+            .onFailure {
+                _uiState.value = _uiState.value.copy(
+                    nasPairMessage = "연결 QR을 읽지 못했어요. 다시 시도해 주세요."
+                )
+            }
+    }
+
+    /** NAS 연결 해제. */
+    fun unpairNas() {
+        nasPairing.unpair()
+        _uiState.value = _uiState.value.copy(nasPairMessage = "NAS 연결을 끊었어요.")
+        refreshNasPairing()
+    }
+
+    fun clearNasPairMessage() {
+        _uiState.value = _uiState.value.copy(nasPairMessage = "")
     }
 
     fun checkPermissions() {

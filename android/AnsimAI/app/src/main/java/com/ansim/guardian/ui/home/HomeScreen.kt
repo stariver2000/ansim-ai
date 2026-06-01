@@ -23,6 +23,7 @@ fun HomeScreen(
     onOpenGuardianSetup: () -> Unit = {},
     onOpenPermissionSetup: () -> Unit = {},
     onOpenAlertLog: () -> Unit = {},
+    onOpenNasConnect: () -> Unit = {},
     onSimulateNotification: (String) -> Unit = {},
     onToggleMonitoring: () -> Unit = {},
     onStartAgent: () -> Unit = {},
@@ -70,6 +71,15 @@ fun HomeScreen(
                 text = if (alertLogCount > 0) "⚠️ 위험 감지 기록  (${alertLogCount}건)" else "⚠️ 위험 감지 기록",
                 style = MaterialTheme.typography.bodyLarge
             )
+        }
+
+        // NAS(별서버) 연결 진입
+        OutlinedButton(
+            onClick = onOpenNasConnect,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("🔗 NAS(별서버) 연결", style = MaterialTheme.typography.bodyLarge)
         }
 
         // 감시 On/Off + 상태 카드
