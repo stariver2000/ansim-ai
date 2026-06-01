@@ -32,6 +32,7 @@ fun NasConnectScreen(
     isPaired: Boolean,
     baseUrl: String,
     tokenExpEpochMs: Long,
+    plannerReady: Boolean?,
     message: String,
     onPayloadScanned: (String) -> Unit,
     onManualConnect: (String, String) -> Unit,
@@ -75,6 +76,12 @@ fun NasConnectScreen(
                         val exp = SimpleDateFormat("yyyy.MM.dd HH:mm", Locale.KOREA).format(Date(tokenExpEpochMs))
                         Text("연결 유효기간: $exp 까지", style = MaterialTheme.typography.bodyLarge, color = TextSecondary)
                     }
+                    val aiText = when (plannerReady) {
+                        true -> "NAS AI: 준비됨 🧠"
+                        false -> "NAS AI: 기본 모드(규칙 기반)"
+                        null -> "NAS AI: 확인 중…"
+                    }
+                    Text(aiText, style = MaterialTheme.typography.bodyLarge, color = TextSecondary)
                 } else {
                     Text(
                         "별서버 안 사도 폰 혼자서도 동작해요. 연결하면 가족 기능이 켜집니다.",

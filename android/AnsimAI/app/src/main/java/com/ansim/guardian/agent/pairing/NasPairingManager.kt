@@ -3,6 +3,7 @@ package com.ansim.guardian.agent.pairing
 import android.content.Context
 import android.util.Log
 import com.ansim.guardian.agent.escalate.NasConnection
+import com.ansim.guardian.agent.escalate.NasPlannerHttp
 
 /**
  * NAS 페어링 수명주기 — QR 수령 → 저장 → [NasConnection] 발급(NAS planner escalate 활성).
@@ -46,6 +47,12 @@ class NasPairingManager(context: Context) {
 
     /** 현재 페어링(표시용 — baseUrl/만료 등). 미페어링이면 null. */
     fun currentPairing(): NasPairing? = store.load()
+
+    /** NAS 로컬 sLLM planner 준비상태(mode==sllm). 미페어링/도달실패면 null. */
+    suspend fun plannerReady(): Boolean? {
+        val conn = currentConnection() ?: return null
+        return NasPlannerHttp(conn).isPlannerReady()
+    }
 
     /** 페어링 해제. */
     fun unpair() {

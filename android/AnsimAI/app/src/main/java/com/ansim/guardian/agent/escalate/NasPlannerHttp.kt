@@ -71,6 +71,27 @@ class NasPlannerHttp(
             }
         }
 
+    /**
+     * NAS 로컬 sLLM planner가 준비됐는가(mode=="sllm")? 인증 불필요한 상태 probe.
+     * 도달 실패/오류면 null(= 모름). NAS가 응답하되 기본모드면 false.
+     */
+    suspend fun isPlannerReady(): Boolean? = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("${connection.baseUrl.trimEnd('/')}/api/elderly/agent/planner-health")
+                .get()
+                .build()
+            http.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val raw = response.body?.string() ?: return@withContext null
+                JSONObject(raw).optString("mode") == "sllm"
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "planner-health 확인 실패: ${e.message}")
+            null
+        }
+    }
+
     private fun parsePlan(raw: String): ToolCall? = runCatching {
         val obj = JSONObject(raw)
         val tool = obj.getString("tool")

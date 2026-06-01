@@ -51,6 +51,7 @@ data class GuardianUiState(
     val nasBaseUrl: String = "",
     val nasTokenExpEpochMs: Long = 0L,
     val nasPairMessage: String = "",
+    val nasPlannerReady: Boolean? = null,   // null=확인중/모름, true=sLLM 준비, false=기본모드
 )
 
 class GuardianViewModel(application: Application) : AndroidViewModel(application) {
@@ -108,14 +109,24 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     // [별돌봄 Phase 11] NAS 연결(페어링)
     // ───────────────────────────────────────────────────────────
 
-    /** 저장된 페어링을 UI 상태로 반영. */
+    /** 저장된 페어링을 UI 상태로 반영. 페어링돼 있으면 NAS planner 준비상태도 비동기 확인. */
     fun refreshNasPairing() {
         val p = nasPairing.currentPairing()
         _uiState.value = _uiState.value.copy(
             isNasPaired = p != null,
             nasBaseUrl = p?.baseUrl ?: "",
             nasTokenExpEpochMs = p?.tokenExpEpochMs ?: 0L,
+            nasPlannerReady = null,
         )
+        if (p != null) refreshPlannerHealth()
+    }
+
+    /** NAS 로컬 sLLM planner 준비상태를 비동기로 확인해 UI에 반영. */
+    fun refreshPlannerHealth() {
+        viewModelScope.launch {
+            val ready = nasPairing.plannerReady()
+            _uiState.value = _uiState.value.copy(nasPlannerReady = ready)
+        }
     }
 
     /** 페어링 QR에서 읽은 원문 페이로드를 검증·저장. 성공/실패 메시지를 상태로. */

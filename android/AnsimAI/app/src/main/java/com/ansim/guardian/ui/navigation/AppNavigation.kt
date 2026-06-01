@@ -86,6 +86,7 @@ fun AppNavigation(
                 isPaired = uiState.isNasPaired,
                 baseUrl = uiState.nasBaseUrl,
                 tokenExpEpochMs = uiState.nasTokenExpEpochMs,
+                plannerReady = uiState.nasPlannerReady,
                 message = uiState.nasPairMessage,
                 onPayloadScanned = { viewModel.onNasQrScanned(it) },
                 onManualConnect = { url, token -> viewModel.onNasManualConnect(url, token) },
