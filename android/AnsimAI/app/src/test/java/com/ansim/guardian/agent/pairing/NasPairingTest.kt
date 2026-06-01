@@ -78,6 +78,21 @@ class NasPairingTest {
     }
 
     @Test
+    fun `fromManual - 유효 주소+토큰`() {
+        val token = jwtWithExp(2_000_000_000L)
+        val p = NasPairing.fromManual("http://192.168.0.10:8002/", token).getOrThrow()
+        assertThat(p.baseUrl).isEqualTo("http://192.168.0.10:8002")
+        assertThat(p.deviceToken).isEqualTo(token)
+        assertThat(p.tokenExpEpochMs).isEqualTo(2_000_000_000L * 1000L)
+    }
+
+    @Test
+    fun `fromManual - http 아니거나 토큰 비면 실패`() {
+        assertThat(NasPairing.fromManual("192.168.0.10:8002", "t").isFailure).isTrue()
+        assertThat(NasPairing.fromManual("http://x:8002", "  ").isFailure).isTrue()
+    }
+
+    @Test
     fun `isExpired 경계`() {
         val p = NasPairing("http://x:8002", "t", tokenExpEpochMs = 1_000L)
         assertThat(p.isExpired(999L)).isFalse()

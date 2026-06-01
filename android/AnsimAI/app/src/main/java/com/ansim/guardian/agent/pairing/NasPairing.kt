@@ -63,6 +63,22 @@ data class NasPairing(
         }
 
         /**
+         * 수동/개발용 연결 — QR 없이 NAS LAN 주소 + Device JWT를 직접 입력해 페어링.
+         * P1의 wg 임베드/QR 발급이 나오기 전, 같은 LAN에서 폰↔NAS planner 연결을 시험할 때 쓴다.
+         *
+         * @return 성공 시 [NasPairing]. baseUrl이 http(s)가 아니거나 토큰이 비면 [Result.failure].
+         */
+        fun fromManual(baseUrl: String, deviceToken: String): Result<NasPairing> = runCatching {
+            val url = baseUrl.trim().trimEnd('/')
+            require(url.startsWith("http://") || url.startsWith("https://")) {
+                "주소가 http(s)로 시작해야 해요: '$url'"
+            }
+            val token = deviceToken.trim()
+            require(token.isNotEmpty()) { "연결 토큰이 비어 있어요" }
+            NasPairing(baseUrl = url, deviceToken = token, tokenExpEpochMs = parseJwtExpMs(token))
+        }
+
+        /**
          * JWT payload(가운데 세그먼트)의 `exp`(epoch초)를 ms로 반환. 서명 검증은 하지 않는다
          * (검증은 NAS 책임; 폰은 만료 UX·불필요 호출 회피용으로만 읽음). 실패 시 0.
          */

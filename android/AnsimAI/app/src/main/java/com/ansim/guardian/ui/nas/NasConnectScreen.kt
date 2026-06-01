@@ -34,11 +34,15 @@ fun NasConnectScreen(
     tokenExpEpochMs: Long,
     message: String,
     onPayloadScanned: (String) -> Unit,
+    onManualConnect: (String, String) -> Unit,
     onUnpair: () -> Unit,
     onScanError: () -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    var showManual by remember { mutableStateOf(false) }
+    var manualUrl by remember { mutableStateOf("") }
+    var manualToken by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(20.dp),
@@ -111,6 +115,41 @@ fun NasConnectScreen(
                 shape = RoundedCornerShape(12.dp),
             ) {
                 Text("연결 해제", style = MaterialTheme.typography.bodyLarge, color = TextSecondary)
+            }
+        }
+
+        // 직접 입력(개발/테스트) — QR이 없을 때 같은 LAN에서 주소+토큰으로 연결
+        TextButton(onClick = { showManual = !showManual }, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                if (showManual) "직접 입력 닫기" else "직접 입력으로 연결 (개발용)",
+                style = MaterialTheme.typography.bodyLarge, color = TextSecondary,
+            )
+        }
+        if (showManual) {
+            OutlinedTextField(
+                value = manualUrl,
+                onValueChange = { manualUrl = it },
+                label = { Text("NAS 주소 (예: http://192.168.0.10:8002)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+            )
+            OutlinedTextField(
+                value = manualToken,
+                onValueChange = { manualToken = it },
+                label = { Text("연결 토큰 (Device JWT)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+            )
+            Button(
+                onClick = { onManualConnect(manualUrl, manualToken) },
+                enabled = manualUrl.isNotBlank() && manualToken.isNotBlank(),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+            ) {
+                Text("직접 연결", style = MaterialTheme.typography.bodyLarge, color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
 

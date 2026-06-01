@@ -132,6 +132,20 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             }
     }
 
+    /** 수동/개발용 연결 — NAS 주소 + 연결 토큰 직접 입력(같은 LAN 시험용). */
+    fun onNasManualConnect(baseUrl: String, token: String) {
+        nasPairing.pairManual(baseUrl, token)
+            .onSuccess {
+                _uiState.value = _uiState.value.copy(nasPairMessage = "NAS에 연결됐어요.")
+                refreshNasPairing()
+            }
+            .onFailure {
+                _uiState.value = _uiState.value.copy(
+                    nasPairMessage = it.message ?: "연결 정보가 올바르지 않아요."
+                )
+            }
+    }
+
     /** NAS 연결 해제. */
     fun unpairNas() {
         nasPairing.unpair()

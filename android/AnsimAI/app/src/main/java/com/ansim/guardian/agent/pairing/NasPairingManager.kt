@@ -31,6 +31,17 @@ class NasPairingManager(context: Context) {
             Log.w(TAG, "NAS 페어링 실패: ${it.message}")
         }
 
+    /**
+     * 수동/개발용 연결 — NAS LAN 주소 + Device JWT 직접 입력. P1 wg/QR 전에 LAN 시험용.
+     */
+    fun pairManual(baseUrl: String, deviceToken: String): Result<NasPairing> =
+        NasPairing.fromManual(baseUrl, deviceToken).onSuccess { pairing ->
+            store.save(pairing)
+            Log.i(TAG, "NAS 수동 연결 저장: ${pairing.baseUrl}")
+        }.onFailure {
+            Log.w(TAG, "NAS 수동 연결 실패: ${it.message}")
+        }
+
     fun isPaired(): Boolean = store.isPaired()
 
     /** 현재 페어링(표시용 — baseUrl/만료 등). 미페어링이면 null. */

@@ -88,6 +88,7 @@ fun AppNavigation(
                 tokenExpEpochMs = uiState.nasTokenExpEpochMs,
                 message = uiState.nasPairMessage,
                 onPayloadScanned = { viewModel.onNasQrScanned(it) },
+                onManualConnect = { url, token -> viewModel.onNasManualConnect(url, token) },
                 onUnpair = { viewModel.unpairNas() },
                 onScanError = { viewModel.onNasQrScanned("") },  // 빈 페이로드 → 실패 메시지
                 onBack = {
