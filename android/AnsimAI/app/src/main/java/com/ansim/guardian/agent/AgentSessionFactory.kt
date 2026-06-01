@@ -7,6 +7,8 @@ import com.ansim.guardian.agent.action.L1Intent
 import com.ansim.guardian.agent.action.L2Shortcut
 import com.ansim.guardian.agent.action.L4Guide
 import com.ansim.guardian.agent.action.ScamCheckTool
+import com.ansim.guardian.agent.escalate.NasConnection
+import com.ansim.guardian.agent.escalate.NasPlannerHttp
 import com.ansim.guardian.agent.nlu.LlmIntentRouter
 import com.ansim.guardian.agent.nlu.StubLlmEngine
 import com.ansim.guardian.agent.nlu.ToolCatalog
@@ -32,6 +34,9 @@ import org.json.JSONObject
 class AgentSessionFactory(
     private val context: Context,
     private val riskEngine: RiskEngine,
+    // Phase 11: NAS 페어링이 끝나면 NasConnection 주입 → NAS planner escalate 활성.
+    // null(기본)이면 폰 단독 모드 — escalate 없이 기존과 동일하게 동작.
+    private val nasConnection: NasConnection? = null,
 ) {
 
     fun build(): AgentSession {
@@ -62,9 +67,13 @@ class AgentSessionFactory(
             downgradeKeywords, downgradeTaskMap,
         )
 
+        // NAS planner escalate (Phase 11) — 페어링 정보가 있을 때만 실 HTTP 클라이언트 연결.
+        val nasPlanner = nasConnection?.let { NasPlannerHttp(it) }
+
         return AgentSession(
             stt = stt, nlu = nlu, tts = tts, ttsCopy = ttsCopy,
             toolCatalog = toolCatalog, action = actionRunner,
+            nasPlanner = nasPlanner,
         )
     }
 

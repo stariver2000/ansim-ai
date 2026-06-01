@@ -39,7 +39,7 @@ class AgentSession(
     private val ttsCopy: TtsCopyProvider,
     private val toolCatalog: ToolCatalog,
     private val action: ActionRunner,
-    @Suppress("unused") private val nasPlanner: NasPlanner? = null,  // Phase 7+
+    private val nasPlanner: NasPlanner? = null,  // Phase 11: NAS planner escalate (미페어링이면 null)
     private val silenceTimeoutMs: Long = 7000,
     private val confirmTimeoutMs: Long = 3000,
 ) {
@@ -66,8 +66,26 @@ class AgentSession(
         Log.i(TAG, "STT: '${sttResult.text}' (conf=${sttResult.confidence})")
 
         // 3) NLU
-        val call = nlu.route(sttResult.text, context)
+        var call = nlu.route(sttResult.text, context)
         Log.i(TAG, "NLU: ${call.tool} ${call.args}")
+
+        // 3.5) 폰이 의도를 못 잡으면(clarify) NAS planner에 escalate (페어링돼 있을 때만).
+        //      NAS 미연결/타임아웃이면 plan()이 null → 폰 단독 fallback으로 그대로 떨어진다.
+        if (call.tool == "clarify" && nasPlanner != null) {
+            val nasCall = nasPlanner.plan(sttResult.text, context)
+            if (nasCall != null && nasCall.tool != "clarify") {
+                Log.i(TAG, "NAS escalate → ${nasCall.tool}")
+                val nasDef = toolCatalog.get(nasCall.tool)
+                if (nasDef == null) {
+                    // 폰 카탈로그에 없는 NAS 전용 도구(call_family_for_help/guide_card_show 등)
+                    // — NAS가 만든 어르신용 안내(say)만 말해주고 종료.
+                    val say = nasCall.argString("say") ?: "도와드릴게요."
+                    tts.speak(say)
+                    return TurnResult.Executed(nasCall, say)
+                }
+                call = nasCall  // 폰도 아는 도구면 아래 정상 confirm/action 경로로 진행
+            }
+        }
 
         // 4) clarify면 질문 TTS 후 종료 (다음 turn에서 사용자가 다시 부름)
         if (call.tool == "clarify") {

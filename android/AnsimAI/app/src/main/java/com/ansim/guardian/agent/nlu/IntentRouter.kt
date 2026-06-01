@@ -31,6 +31,7 @@ interface IntentRouter {
  */
 data class AgentContext(
     val currentApp: String? = null,
+    val screenKind: String? = null,   // NAS planner escalate용 비식별 화면 종류 (예: "chat")
     val nowKo: String = "",
     val knownAliases: List<String> = emptyList(),
     val recentTurns: List<String> = emptyList()
