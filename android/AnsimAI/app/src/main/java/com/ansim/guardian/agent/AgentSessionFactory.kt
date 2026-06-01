@@ -34,9 +34,9 @@ import org.json.JSONObject
 class AgentSessionFactory(
     private val context: Context,
     private val riskEngine: RiskEngine,
-    // Phase 11: NAS 페어링이 끝나면 NasConnection 주입 → NAS planner escalate 활성.
-    // null(기본)이면 폰 단독 모드 — escalate 없이 기존과 동일하게 동작.
-    private val nasConnection: NasConnection? = null,
+    // Phase 11: NAS 페어링이 돼 있으면 NasConnection을 돌려주는 공급자 → NAS planner escalate 활성.
+    // build() 시점에 매번 호출하므로 최신 페어링 상태(만료/해제 포함)를 반영. 기본은 폰 단독(null).
+    private val nasConnectionProvider: () -> NasConnection? = { null },
 ) {
 
     fun build(): AgentSession {
@@ -67,8 +67,8 @@ class AgentSessionFactory(
             downgradeKeywords, downgradeTaskMap,
         )
 
-        // NAS planner escalate (Phase 11) — 페어링 정보가 있을 때만 실 HTTP 클라이언트 연결.
-        val nasPlanner = nasConnection?.let { NasPlannerHttp(it) }
+        // NAS planner escalate (Phase 11) — 현재 페어링이 있을 때만 실 HTTP 클라이언트 연결.
+        val nasPlanner = nasConnectionProvider()?.let { NasPlannerHttp(it) }
 
         return AgentSession(
             stt = stt, nlu = nlu, tts = tts, ttsCopy = ttsCopy,

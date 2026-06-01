@@ -79,6 +79,9 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // [별돌봄 Phase 11] NAS 페어링 자격(Device JWT) 암호화 저장
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     // [별돌봄 Phase 1] sherpa-onnx STT (한국어 Zipformer)
     // AAR은 GitHub Releases에서 직접 받아 app/libs/sherpa-onnx-1.13.2.aar로 배치
     //   wget https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.2/sherpa-onnx-1.13.2.aar -O app/libs/sherpa-onnx-1.13.2.aar
@@ -94,4 +97,6 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("com.google.truth:truth:1.4.2")
+    // org.json은 android.jar에서 스텁(throw)이라 JVM 단위테스트에선 실제 구현 필요
+    testImplementation("org.json:json:20240303")
 }
