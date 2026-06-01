@@ -7,7 +7,7 @@ import com.ansim.guardian.agent.nlu.ToolCall
  * 폰 sLLM이 처리 못한 의도를 NAS planner(EXAONE-2.4B)에 escalate.
  *
  * Phase 7: Stub (항상 null 반환 → 폰이 "잘 모르겠어요" 폴백)
- * Phase 11: 실제 HTTP 구현 (Tailscale + Device JWT)
+ * Phase 11: 실제 HTTP 구현 (NasPlannerHttp — 자체구축 WireGuard split VPN + Device JWT)
  *
  * 자세한 설계: docs/codex-design/11-product-elderly/NAS_PLANNER_DESIGN_KO.md
  */

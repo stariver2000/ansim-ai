@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
  *  - **원문은 NAS 안에서만**: utterance는 vault로만 가고, 응답엔 비식별 메타+say만 온다.
  *  - NAS가 돌려준 say(어르신용 안내 멘트)는 ToolCall.args["say"]에 실어 AgentSession이 그대로 읽게 한다.
  *
- * Phase 11에서 Tailscale 페어링이 붙으면 [NasConnection]에 실제 NAS 주소/Device JWT가 주입된다.
+ * Phase 11에서 자체구축 WireGuard split VPN 페어링이 붙으면 [NasConnection]에 실제 NAS 주소/Device JWT가 주입된다.
  * 페어링 전(=현재)에는 AgentSessionFactory가 이 클라이언트를 만들지 않으므로(nasPlanner=null)
  * 프로덕션 동작에 영향이 없다.
  *
@@ -102,9 +102,9 @@ class NasPlannerHttp(
 }
 
 /**
- * NAS 연결 정보. Phase 11 Tailscale 페어링이 채운다.
+ * NAS 연결 정보. Phase 11 자체구축 WireGuard split VPN 페어링이 채운다.
  *
- * @param baseUrl       NAS 주소 (예: Tailscale "http://100.x.y.z:8002")
+ * @param baseUrl       NAS 주소 (예: WireGuard 터널 대역 "http://10.x.x.x:8002")
  * @param deviceToken   유효한 Device JWT를 돌려주는 공급자. 미페어링이면 null →
  *                      NasPlannerHttp가 escalate를 조용히 건너뜀.
  */
